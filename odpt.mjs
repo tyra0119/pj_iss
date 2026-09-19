@@ -1,13 +1,17 @@
 // ODPT の列車運行情報。アクセストークンは端末の localStorage にだけ保存する（リポジトリには入れない）
 // 公開 API（東京メトロ・都営・りんかい線・多摩モノレール・横浜市営など）とチャレンジ API（JR東日本・東急・京急・京王・西武・東武など）で
 // 提供事業者が違うので、両方のトークンを持てるようにする
+import { ODPT_TOKENS } from './config.mjs';
+
 const ENDPOINTS = [
-  { key: 'odptToken', base: 'https://api.odpt.org/api/v4', label: '公開API' },
-  { key: 'odptChallengeToken', base: 'https://api-challenge.odpt.org/api/v4', label: 'チャレンジAPI' },
+  { key: 'odptToken', base: 'https://api.odpt.org/api/v4', label: '公開API', builtin: ODPT_TOKENS.public || '' },
+  { key: 'odptChallengeToken', base: 'https://api-challenge.odpt.org/api/v4', label: 'チャレンジAPI', builtin: ODPT_TOKENS.challenge || '' },
 ];
 const KEY = ENDPOINTS[0].key;
 
-export function getToken(which = 0) { try { return localStorage.getItem(ENDPOINTS[which].key) || ''; } catch { return ''; } }
+// 端末に保存した値 > ビルド時に .env から埋め込んだ値
+export function getToken(which = 0) { let v = ''; try { v = localStorage.getItem(ENDPOINTS[which].key) || ''; } catch { /* ignore */ } return v || ENDPOINTS[which].builtin; }
+export function hasBuiltinToken(which = 0) { return !!ENDPOINTS[which].builtin; }
 export function setToken(t, which = 0) { try { t ? localStorage.setItem(ENDPOINTS[which].key, t.trim()) : localStorage.removeItem(ENDPOINTS[which].key); } catch { /* ignore */ } }
 export function hasAnyToken() { return !!(getToken(0) || getToken(1)); }
 

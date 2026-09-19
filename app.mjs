@@ -4,7 +4,7 @@ import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs';
 import { estimateTravel, buildItinerary } from './lib/plan.mjs';
 import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs';
 import { showSiteMap, startCompass, stopCompass } from './onsite.mjs';
-import { getToken, setToken, hasAnyToken, lineStatuses } from './odpt.mjs';
+import { getToken, setToken, hasAnyToken, hasBuiltinToken, lineStatuses } from './odpt.mjs';
 
 const DAYS = 60;
 const TZ = 9;
@@ -427,8 +427,10 @@ async function init() {
   }
   try { const saved = localStorage.getItem('fromStation'); if (saved) sel.value = saved; } catch { /* ignore */ }
   sel.addEventListener('change', () => { try { localStorage.setItem('fromStation', sel.value); } catch { /* ignore */ } });
-  $('#odptToken').value = getToken(0);
-  $('#odptChallengeToken').value = getToken(1);
+  // 埋め込み済みなら入力欄は空のまま（上書き用）にして、その旨を表示
+  $('#odptToken').value = hasBuiltinToken(0) ? '' : getToken(0);
+  $('#odptChallengeToken').value = hasBuiltinToken(1) ? '' : getToken(1);
+  if (hasBuiltinToken(0) || hasBuiltinToken(1)) $('#odptStatus').textContent = `設定済み（${[hasBuiltinToken(0) && '公開API', hasBuiltinToken(1) && 'チャレンジAPI'].filter(Boolean).join('・')}）。入力すると上書きできます`;
   const ep = tleEpoch(state.satrec);
   $('#tleInfo').textContent = `軌道データ: ${source}。基準時刻 ${jst(ep).toISOString().replace('T', ' ').slice(0, 16)}。基準時刻から日が離れるほど、予測時刻が数分ずれます。`;
   const obs = observer(CENTER.lat, CENTER.lon);
