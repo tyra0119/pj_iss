@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ISS 可視パス（首都圏）</title>
+<meta name="description" content="今夜と次の窓で、東京からISS（きぼう）が肉眼ではっきり見えるパスを計算します。">
+<script type="importmap">{"imports":{"satellite.js":"https://cdn.jsdelivr.net/npm/satellite.js@7.1.0/+esm"}}</script>
+<style>
+  :root{--bg:#0b1020;--fg:#e8ecf5;--muted:#8b94ad;--card:#141b33;--line:#243055;--accent:#ffd166;--ok:#7ce38b;--ng:#ff7b7b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.6}
+  main{max-width:760px;margin:0 auto;padding:24px 16px 64px}
+  h1{font-size:1.4rem;margin:0 0 4px}
+  h2{font-size:1rem;margin:0 0 8px}
+  .sub{color:var(--muted);font-size:.9rem;margin:0 0 20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 16px}
+  .tonight{font-size:1.2rem;font-weight:700}
+  .ok{color:var(--ok)}.ng{color:var(--ng)}
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  th,td{padding:6px 4px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--muted);font-weight:500}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .win{color:var(--accent);font-weight:700;padding-top:14px}
+  .muted{color:var(--muted)}
+  form{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.9rem}
+  input{width:7.5em;background:#0b1020;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+  button{background:var(--line);color:var(--fg);border:0;border-radius:6px;padding:6px 10px;cursor:pointer}
+  details summary{cursor:pointer;color:var(--muted)}
+  .scroll{overflow-x:auto}
+  footer{color:var(--muted);font-size:.8rem;margin-top:24px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <h1>ISS 可視パス（首都圏）</h1>
+  <p class="sub">最大仰角30°以上・光度−1等以下・太陽高度−8°以下を満たす、肉眼ではっきり見えるパスだけを表示します。天気と遮蔽はまだ見ていません。</p>
+
+  <div class="card">
+    <form id="obs">
+      <label>緯度 <input name="lat" value="35.681" inputmode="decimal"></label>
+      <label>経度 <input name="lon" value="139.767" inputmode="decimal"></label>
+      <button type="submit">再計算</button>
+      <button type="button" id="geo">現在地</button>
+      <span id="status" class="muted"></span>
+    </form>
+  </div>
+
+  <div class="card"><div id="tonight" class="tonight">計算中…</div><div id="tonightDetail" class="muted"></div></div>
+
+  <div class="card">
+    <h2>これから60日の夕方パス</h2>
+    <div class="scroll"><table id="evening"><thead><tr><th>日付</th><th>見え始め</th><th>最高</th><th>見え終わり</th><th>方向</th><th class="num">最大仰角</th><th class="num">光度</th></tr></thead><tbody></tbody></table></div>
+    <p id="eveningEmpty" class="muted" hidden>60日以内に夕方の条件充足パスはありません。</p>
+  </div>
+
+  <div class="card">
+    <details><summary>早朝パス（公共交通では行けないので参考）</summary>
+    <div class="scroll"><table id="morning"><thead><tr><th>日付</th><th>見え始め</th><th>最高</th><th>見え終わり</th><th>方向</th><th class="num">最大仰角</th><th class="num">光度</th></tr></thead><tbody></tbody></table></div>
+    </details>
+  </div>
+
+  <footer>
+    <div id="tleInfo"></div>
+    <div>軌道要素: <a href="https://celestrak.org/" rel="noopener">CelesTrak</a>（NORAD 25544）／伝播: satellite.js SGP4／地球影・光度は自前計算。時刻はJST。</div>
+    <div>ODPTチャレンジ2026向け開発中。ソース: <a href="https://github.com/tyra0119/iss" rel="noopener">tyra0119/iss</a></div>
+  </footer>
+</main>
+<script type="module" src="./app.mjs"></script>
+</body>
+</html>
