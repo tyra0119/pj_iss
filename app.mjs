@@ -6,7 +6,7 @@ import { loadTransit } from './lib/transit.mjs';
 import { packingList } from './lib/packing.mjs';
 import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs';
 import { showSiteMap, startCompass, stopCompass } from './onsite.mjs';
-import { getToken, setToken, hasAnyToken, hasBuiltinToken, lineStatuses } from './odpt.mjs';
+import { hasAnyToken, lineStatuses } from './odpt.mjs';
 
 const DAYS = 60;
 const TZ = 9;
@@ -473,7 +473,7 @@ async function renderTrainInfo(best, good) {
   const lines = used.size ? [...used].map(([id, name]) => ({ id, name })) : [...new Set([...(state.from?.lines ?? []), ...best.site.lines])];
   const lineName = (x) => (typeof x === 'string' ? x : x.name);
   if (!hasAnyToken()) {
-    el.innerHTML = '<span class="muted">運行情報: ページ下の「運行情報の設定」で ODPT のアクセストークンを入れると、乗る路線の遅れをここに表示し、遅れているときは次点の候補地に切り替えを案内します。</span>';
+    el.innerHTML = '<span class="muted">運行情報は取得できません（このページの設定にトークンが含まれていません）。</span>';
     return;
   }
   try {
@@ -582,9 +582,6 @@ async function init() {
   }
   try { const saved = localStorage.getItem('fromStation'); if (saved) sel.value = saved; } catch { /* ignore */ }
   sel.addEventListener('change', () => { try { localStorage.setItem('fromStation', sel.value); } catch { /* ignore */ } });
-  $('#odptToken').value = hasBuiltinToken(0) ? '' : getToken(0);
-  $('#odptChallengeToken').value = hasBuiltinToken(1) ? '' : getToken(1);
-  if (hasBuiltinToken(0) || hasBuiltinToken(1)) $('#odptStatus').textContent = `設定済み（${[hasBuiltinToken(0) && '公開API', hasBuiltinToken(1) && 'チャレンジAPI'].filter(Boolean).join('・')}）。入力すると上書きできます`;
   const ep = tleEpoch(state.satrec);
   $('#tleInfo').textContent = `軌道データ: ${source}。基準時刻 ${jst(ep).toISOString().replace('T', ' ').slice(0, 16)}。基準時刻から日が離れるほど、予測時刻が数分ずれます。`
     + (transit ? ` 鉄道の経路と始発・終電は公共交通オープンデータセンター（ODPT）の路線・駅・時刻表データ（${transit.data.generated.slice(0, 10)} 取得）から計算。` : ' 鉄道データを読み込めなかったため、所要時間は距離からの概算です。');
@@ -607,11 +604,5 @@ $('#compassBtn').addEventListener('click', async () => {
   if (!state.sitePass) return;
   $('#compassStatus').textContent = '';
   await startCompass($('#compass'), state.sitePass, (msg) => { $('#compassStatus').textContent = msg; });
-});
-$('#odptSave').addEventListener('click', () => {
-  setToken($('#odptToken').value, 0);
-  setToken($('#odptChallengeToken').value, 1);
-  $('#odptStatus').textContent = hasAnyToken() ? '保存しました（この端末のブラウザにだけ保存されます）' : '削除しました';
-  if (state.pass) runPlan().catch(showError);
 });
 init().catch(showError);
