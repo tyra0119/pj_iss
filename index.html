@@ -4,45 +4,58 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ISS を見に行く（首都圏）</title>
-<meta name="description" content="指定した日に首都圏で ISS（国際宇宙ステーション）が肉眼ではっきり見えるか調べ、晴れそうな観測場所を提案します。">
+<meta name="description" content="首都圏で ISS（国際宇宙ステーション）が肉眼ではっきり見える日と場所を提案し、電車での行き方と帰りの終電まで計画します。">
 <script type="importmap">{"imports":{"satellite.js":"https://cdn.jsdelivr.net/npm/satellite.js@7.1.0/+esm"}}</script>
 <style>
   :root{--bg:#0b1020;--fg:#e8ecf5;--muted:#8b94ad;--card:#141b33;--line:#243055;--accent:#ffd166;--ok:#7ce38b;--ng:#ff7b7b;--warn:#ffb86b}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.6}
-  main{max-width:820px;margin:0 auto;padding:24px 16px 64px}
-  h1{font-size:1.4rem;margin:0 0 4px}
+  main{max-width:820px;margin:0 auto;padding:20px 16px 64px}
+  h1{font-size:1.35rem;margin:0}
   h2{font-size:1.05rem;margin:0 0 10px}
   h3{font-size:.95rem;margin:14px 0 6px}
-  .sub{color:var(--muted);font-size:.9rem;margin:0 0 20px}
+  .sub{color:var(--muted);font-size:.9rem;margin:2px 0 14px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 16px}
   .headline{font-size:1.2rem;font-weight:700}
-  .ok{color:var(--ok)}.ng{color:var(--ng)}.warn{color:var(--warn)}
+  .ok{color:var(--ok)}.ng{color:var(--ng)}.warn{color:var(--warn)}.acc{color:var(--accent);font-weight:700}
+  .muted{color:var(--muted)}.small{font-size:.85rem}
   table{width:100%;border-collapse:collapse;font-size:.9rem}
   th,td{padding:6px 4px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
   th{color:var(--muted);font-weight:500}
   td.wrap{white-space:normal}
   .num{text-align:right;font-variant-numeric:tabular-nums}
   .sep{color:var(--accent);font-weight:700;padding-top:14px}
-  .muted{color:var(--muted)}
-  .small{font-size:.85rem}
   form{display:flex;gap:10px 14px;flex-wrap:wrap;align-items:center;font-size:.9rem}
-  input{background:#0b1020;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit}
+  input,select{background:#0b1020;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit}
   input[type=date]{color-scheme:dark}
-  button{background:var(--line);color:var(--fg);border:0;border-radius:6px;padding:7px 12px;cursor:pointer;font:inherit}
+  button{background:var(--line);color:var(--fg);border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit}
   button.primary{background:var(--accent);color:#1a1400;font-weight:700}
+  button.link{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
+  button.ghost{background:none;border:1px solid var(--line)}
+  .steps{display:flex;gap:6px;margin:14px 0 18px;font-size:.85rem}
+  .steps button{flex:1;background:var(--card);border:1px solid var(--line);color:var(--muted);padding:8px 6px;border-radius:8px}
+  .steps button[aria-current=step]{border-color:var(--accent);color:var(--fg);font-weight:700}
+  .steps button:disabled{opacity:.45;cursor:default}
+  .screen[hidden]{display:none}
+  .navrow{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
+  .proposals{display:grid;gap:10px;margin:0}
+  .proposal{display:block;width:100%;text-align:left;background:#0f1630;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .proposal:hover{border-color:var(--accent)}
+  .proposal .when{font-size:1.05rem;font-weight:700}
+  .proposal .where{margin-top:2px}
+  .proposal .meta{color:var(--muted);font-size:.85rem;font-weight:400}
+  .proposal.dim{opacity:.7}
   .pass-pick{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
   .pass-pick button[aria-pressed=true]{outline:2px solid var(--accent)}
   details summary{cursor:pointer;color:var(--muted)}
   .scroll{overflow-x:auto}
   .badge{display:inline-block;padding:0 6px;border-radius:999px;font-size:.8rem;border:1px solid var(--line)}
-  .badge.ok{border-color:var(--ok)}.badge.ng{border-color:var(--ng)}.badge.warn{border-color:var(--warn)}
-  ul{margin:6px 0;padding-left:1.2em}
+  .badge.ok{border-color:var(--ok)}.badge.ng{border-color:var(--ng)}.badge.acc{border-color:var(--accent);color:var(--accent)}
+  ul,ol{margin:6px 0;padding-left:1.2em}
   footer{color:var(--muted);font-size:.8rem;margin-top:24px}
   a{color:var(--accent)}
   .strip{color:var(--fg);margin:8px 0}
   .map{height:360px;border-radius:10px;overflow:hidden;background:#0b1020}
-  .acc{color:var(--accent);font-weight:700}
   .compass-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
   .compass{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:8px}
   .arrow-label span{display:inline-block;background:#0b1020;color:#e8ecf5;border:2px solid #ffd166;border-radius:6px;padding:2px 6px;font-size:12px;line-height:1.3;white-space:nowrap;transform:translate(-50%,8px)}
@@ -54,107 +67,134 @@
   .reco{border-color:var(--accent)}
   .timeline th{width:3.5em;color:var(--accent);white-space:nowrap}
   .timeline td{white-space:normal}
-  button.link{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
   .legs{margin:6px 0 2px;padding-left:1.3em}
   .legs li{margin:3px 0;white-space:normal}
   .packing{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
   .packing summary{color:var(--fg);font-weight:700}
-  select{background:#0b1020;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit}
 </style>
 </head>
 <body>
 <main>
   <h1>ISS を見に行く（首都圏）</h1>
-  <p class="sub">日付を選ぶと、その日の夕方に ISS（国際宇宙ステーション）が肉眼ではっきり見えるかを計算し、晴れそうな観測場所を提案します。表示する通過は「最大の高さ30°以上・明るさ−1等より明るい・空が十分暗い」を満たすものだけです。</p>
+  <p class="sub">肉眼ではっきり見える日と場所を提案し、電車での行き方と帰りの終電まで計画します。<span id="status" class="small"></span></p>
 
-  <div class="card">
-    <form id="plan">
-      <label>見に行く日 <input type="date" name="date" required></label>
-      <label>出発駅 <select name="from"><option value="">（選ぶと出発時刻を出します）</option><option value="geo">現在地</option></select></label>
-      <button type="submit" class="primary">調べる</button>
-      <span id="status" class="muted small"></span>
-    </form>
-  </div>
+  <nav class="steps" aria-label="手順">
+    <button type="button" data-go="1" aria-current="step">① 日と出発駅</button>
+    <button type="button" data-go="2" disabled>② 観測場所</button>
+    <button type="button" data-go="3" disabled>③ 計画</button>
+    <button type="button" data-go="4">見方と説明</button>
+  </nav>
 
-  <div class="card">
-    <div id="headline" class="headline">計算中…</div>
-    <div id="headlineDetail" class="muted"></div>
-    <div id="passPick" class="pass-pick"></div>
-  </div>
-
-  <div id="recoCard" class="card reco" hidden>
-    <h2>この日の計画</h2>
-    <div id="reco"></div>
-  </div>
-
-  <div id="sitesCard" class="card" hidden>
-    <h2>観測場所の候補</h2>
-    <p id="sitesNote" class="muted small"></p>
-    <div class="scroll"><table id="sites"><thead><tr><th>順位</th><th>場所</th><th>最寄駅</th><th class="num">所要の目安</th><th class="num">雲（低い雲＋中間の雲）</th><th>観測</th><th class="wrap">移動の注意</th><th></th></tr></thead><tbody></tbody></table></div>
-    <p class="muted small">所要時間は ODPT の路線・駅・時刻表データから計算した鉄道経路（徒歩と乗換の待ちを含む）です。* が付いたものは駅データに無いため距離からの概算です。候補地の行を押すと、その場所の計画と地図に切り替わります。</p>
-  </div>
-
-  <div id="onsiteCard" class="card" hidden>
-    <h2>現地でどっちを向くか</h2>
-    <p id="onsiteSite" class="small"></p>
-    <div id="map" class="map"></div>
-    <p class="small">青い点に立ち、<span class="acc">黄色①の矢印</span>の先の空を見ます。地図の道路や川、駅の位置と見比べて向きを合わせてください。橙②は最も高くなる方角、灰③は消える方角です。</p>
-    <div class="compass-row">
-      <button type="button" id="compassBtn">スマホのコンパスで合わせる</button>
-      <span id="compassStatus" class="muted small"></span>
+  <section id="screen1" class="screen">
+    <div class="card">
+      <h2>出発駅</h2>
+      <form id="fromForm">
+        <label>どこから行きますか <select name="from"><option value="">（選んでください）</option><option value="geo">現在地</option></select></label>
+      </form>
+      <p class="muted small">出発駅を選ぶと、提案に所要時間が付き、計画に乗る電車と出発時刻が出ます。</p>
     </div>
-    <div id="compass" class="compass"></div>
-  </div>
 
-  <div id="howCard" class="card" hidden>
-    <h2>どこを見ればいいか</h2>
-    <div id="describe"></div>
-    <div id="scene" class="strip"></div>
-    <details><summary>見つけ方のコツ</summary><ul id="howto"></ul></details>
-  </div>
+    <div class="card">
+      <h2>見える日の提案（これから60日）</h2>
+      <p id="proposalsNote" class="muted small">計算中…</p>
+      <div id="proposals" class="proposals"></div>
+      <p class="muted small" style="margin-top:10px">見える日は2〜4日続けて来て、そのあと数週間は見えません。表示するのは「最大の高さ30°以上・明るさ−1等より明るい・空が十分暗い」通過だけです。</p>
+    </div>
 
-  <div class="card">
-    <h2>図で分かる「見える条件」</h2>
-    <h3>高さ30°ってどのくらい？</h3>
-    <p class="small">空の高さは「地平線から何度見上げるか」で表します。腕をまっすぐ伸ばして握った拳1つ分が約10°です。このアプリは、いちばん高いところで30°以上（拳3つ分以上）まで上がる通過だけを出します。低いと建物や木に隠れ、空気のにごりで暗くなるためです。</p>
-    <div id="figElevation"></div>
-    <h3>「太陽が地平線の8°下」ってどういうこと？</h3>
-    <p class="small">ISS は自分で光らず、太陽の光を反射して見えます。日が沈んで地上が暗くなっても、高さ400 kmを飛ぶ ISS にはしばらく日が当たり続けます。この「地上は暗いのに ISS は明るい」時間が見ごろで、目安が「太陽が地平線の8°より下」（日没の40分ほど後）です。</p>
-    <div id="figTwilight"></div>
-    <h3>明るさ「−1等」とは？</h3>
-    <p class="small">星の明るさは「等級」で表し、数字が小さいほど明るく、マイナスになると特に明るい星です。−1等はいちばん明るい恒星（シリウス）と同じくらい。ISS は条件が良いと−3〜−4等になり、金星に近い明るさで街中でも見えます。</p>
-  </div>
+    <div class="card">
+      <h2>自分で日を選ぶ</h2>
+      <form id="plan">
+        <label>見に行く日 <input type="date" name="date" required></label>
+        <button type="submit" class="primary">この日を調べる</button>
+      </form>
+      <p class="muted small">見えない日を選ぶと、次に見える時期を案内します。</p>
+    </div>
 
-  <div class="card">
-    <h2>今日から60日間で夕方に見える日</h2>
-    <div class="scroll"><table id="evening"><thead><tr><th>日付</th><th>見え始め</th><th>最高</th><th>見え終わり</th><th>方向</th><th class="num">最大の高さ</th><th class="num">明るさ</th></tr></thead><tbody></tbody></table></div>
-    <p id="eveningEmpty" class="muted" hidden>60日以内に夕方に見える日はありません。</p>
-    <p class="muted small">見える日は2〜4日続けて来て、そのあと数週間は見えません。表の「ここから次に見える時期」はその区切りです。</p>
-  </div>
+    <div class="card">
+      <details><summary>夜明け前（4〜5時台）に見える日。前の晩に出かけて始発で帰る計画になります</summary>
+      <div id="morningProposals" class="proposals" style="margin-top:10px"></div>
+      </details>
+    </div>
+  </section>
 
-  <div class="card">
-    <details><summary>夜明け前（4〜5時台）に見えるもの。前の晩に出かけて始発で帰る計画になります</summary>
-    <div class="scroll"><table id="morning"><thead><tr><th>日付</th><th>見え始め</th><th>最高</th><th>見え終わり</th><th>方向</th><th class="num">最大の高さ</th><th class="num">明るさ</th></tr></thead><tbody></tbody></table></div>
-    </details>
-  </div>
+  <section id="screen2" class="screen" hidden>
+    <div class="navrow"><button type="button" class="ghost" data-go="1">← 日を選び直す</button><button type="button" id="goBest" class="primary" hidden>おすすめの場所で計画を見る →</button></div>
+    <div class="card">
+      <div id="headline" class="headline">計算中…</div>
+      <div id="headlineDetail" class="muted"></div>
+      <div id="passPick" class="pass-pick"></div>
+    </div>
+    <div id="sitesCard" class="card" hidden>
+      <h2>観測場所を選んでください</h2>
+      <p id="sitesNote" class="muted small"></p>
+      <div class="scroll"><table id="sites"><thead><tr><th>順位</th><th>場所</th><th>最寄駅</th><th class="num">所要の目安</th><th class="num">雲（低い雲＋中間の雲）</th><th>観測</th><th class="wrap">移動の注意</th><th></th></tr></thead><tbody></tbody></table></div>
+      <p class="muted small">所要時間は ODPT の路線・駅・時刻表データから計算した鉄道経路（徒歩と乗換の待ちを含む）です。* が付いたものは駅データに無いため距離からの概算です。上ほどおすすめです。</p>
+    </div>
+  </section>
 
-  <div class="card">
-    <h2>言葉の説明</h2>
-    <table><tbody>
-      <tr><th>通過</th><td class="wrap">ISS が空を横切ること。1回に2〜6分。ISS は約90分で地球を1周し、そのうち日本の上空を通る回だけが見えます。</td></tr>
-      <tr><th>見える時期</th><td class="wrap">夕方に見える日は2〜4日続けてやって来て、そのあと数週間は見えません。このまとまりを「見える時期」と呼んでいます。約2か月ごとにめぐってきます。</td></tr>
-      <tr><th>夜明け前の通過</th><td class="wrap">朝4〜5時台に見える通過。条件は良くても電車が動いていないので、このアプリでは参考扱いです。</td></tr>
-      <tr><th>軌道データ</th><td class="wrap">ISS が「いつ・どこを・どの速さで」飛んでいるかを表す数値のセット。米国の観測機関が毎日更新し、CelesTrak というサイトが配っています。専門用語では「軌道要素（TLE）」。</td></tr>
-      <tr><th>基準時刻</th><td class="wrap">その軌道データが「この時刻の状態」として作られた日時。ここから先の位置は計算で予測するので、基準時刻から離れるほど予測がずれます（2週間で数分）。専門用語では「元期（げんき）」。</td></tr>
-      <tr><th>位置の計算</th><td class="wrap">軌道データをもとに、指定した時刻に ISS がどこにいるかを計算すること。専門用語では「伝播（でんぱ）」。</td></tr>
-      <tr><th>高さ（仰角）</th><td class="wrap">地平線から何度見上げるか。0°が地平線、90°が真上。上の図を参照。</td></tr>
-      <tr><th>等級</th><td class="wrap">明るさの単位。数字が小さいほど明るい。−1等でいちばん明るい星なみ、−4等で金星なみ。</td></tr>
-    </tbody></table>
-  </div>
+  <section id="screen3" class="screen" hidden>
+    <div class="navrow"><button type="button" class="ghost" data-go="2">← 観測場所を選び直す</button><button type="button" class="ghost" data-go="1">最初から</button></div>
+    <div id="recoCard" class="card reco" hidden>
+      <h2>この日の計画</h2>
+      <div id="reco"></div>
+    </div>
+    <div id="onsiteCard" class="card" hidden>
+      <h2>現地でどっちを向くか</h2>
+      <p id="onsiteSite" class="small"></p>
+      <div id="map" class="map"></div>
+      <p class="small">青い点に立ち、<span class="acc">黄色①の矢印</span>の先の空を見ます。地図の道路や川、駅の位置と見比べて向きを合わせてください。橙②は最も高くなる方角、灰③は消える方角です。</p>
+      <div class="compass-row">
+        <button type="button" id="compassBtn">スマホのコンパスで合わせる</button>
+        <span id="compassStatus" class="muted small"></span>
+      </div>
+      <div id="compass" class="compass"></div>
+    </div>
+    <div id="howCard" class="card" hidden>
+      <h2>どこを見ればいいか</h2>
+      <div id="describe"></div>
+      <div id="scene" class="strip"></div>
+      <details><summary>見つけ方のコツ</summary><ul id="howto"></ul></details>
+    </div>
+  </section>
+
+  <section id="screen4" class="screen" hidden>
+    <div class="navrow"><button type="button" class="ghost" data-go="1">← 戻る</button></div>
+    <div class="card">
+      <h2>図で分かる「見える条件」</h2>
+      <h3>高さ30°ってどのくらい？</h3>
+      <p class="small">空の高さは「地平線から何度見上げるか」で表します。腕をまっすぐ伸ばして握った拳1つ分が約10°です。このアプリは、いちばん高いところで30°以上（拳3つ分以上）まで上がる通過だけを出します。低いと建物や木に隠れ、空気のにごりで暗くなるためです。</p>
+      <div id="figElevation"></div>
+      <h3>「太陽が地平線の8°下」ってどういうこと？</h3>
+      <p class="small">ISS は自分で光らず、太陽の光を反射して見えます。日が沈んで地上が暗くなっても、高さ400 kmを飛ぶ ISS にはしばらく日が当たり続けます。この「地上は暗いのに ISS は明るい」時間が見ごろで、目安が「太陽が地平線の8°より下」（日没の40分ほど後）です。</p>
+      <div id="figTwilight"></div>
+      <h3>明るさ「−1等」とは？</h3>
+      <p class="small">星の明るさは「等級」で表し、数字が小さいほど明るく、マイナスになると特に明るい星です。−1等はいちばん明るい恒星（シリウス）と同じくらい。ISS は条件が良いと−3〜−4等になり、金星に近い明るさで街中でも見えます。</p>
+    </div>
+    <div class="card">
+      <h2>今日から60日間で夕方に見える日</h2>
+      <div class="scroll"><table id="evening"><thead><tr><th>日付</th><th>見え始め</th><th>最高</th><th>見え終わり</th><th>方向</th><th class="num">最大の高さ</th><th class="num">明るさ</th></tr></thead><tbody></tbody></table></div>
+      <p id="eveningEmpty" class="muted" hidden>60日以内に夕方に見える日はありません。</p>
+      <h3>夜明け前（4〜5時台）に見えるもの</h3>
+      <div class="scroll"><table id="morning"><thead><tr><th>日付</th><th>見え始め</th><th>最高</th><th>見え終わり</th><th>方向</th><th class="num">最大の高さ</th><th class="num">明るさ</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>言葉の説明</h2>
+      <table><tbody>
+        <tr><th>通過</th><td class="wrap">ISS が空を横切ること。1回に2〜6分。ISS は約90分で地球を1周し、そのうち日本の上空を通る回だけが見えます。</td></tr>
+        <tr><th>見える時期</th><td class="wrap">夕方に見える日は2〜4日続けてやって来て、そのあと数週間は見えません。このまとまりを「見える時期」と呼んでいます。約2か月ごとにめぐってきます。</td></tr>
+        <tr><th>夜明け前の通過</th><td class="wrap">朝4〜5時台に見える通過。電車が動く前なので、前の晩に出かけて始発で帰る計画になります。</td></tr>
+        <tr><th>軌道データ</th><td class="wrap">ISS が「いつ・どこを・どの速さで」飛んでいるかを表す数値のセット。米国の観測機関が毎日更新し、CelesTrak というサイトが配っています。専門用語では「軌道要素（TLE）」。</td></tr>
+        <tr><th>基準時刻</th><td class="wrap">その軌道データが「この時刻の状態」として作られた日時。ここから先の位置は計算で予測するので、基準時刻から離れるほど予測がずれます（2週間で数分）。専門用語では「元期（げんき）」。</td></tr>
+        <tr><th>位置の計算</th><td class="wrap">軌道データをもとに、指定した時刻に ISS がどこにいるかを計算すること。専門用語では「伝播（でんぱ）」。</td></tr>
+        <tr><th>高さ（仰角）</th><td class="wrap">地平線から何度見上げるか。0°が地平線、90°が真上。上の図を参照。</td></tr>
+        <tr><th>等級</th><td class="wrap">明るさの単位。数字が小さいほど明るい。−1等でいちばん明るい星なみ、−4等で金星なみ。</td></tr>
+      </tbody></table>
+    </div>
+  </section>
 
   <footer>
     <div id="tleInfo"></div>
-    <div>軌道データ: <a href="https://celestrak.org/" rel="noopener">CelesTrak</a>（ISS, NORAD 25544）。位置の計算は satellite.js、地球の影と明るさは自前で計算。天気は <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a>。時刻は日本時間。</div>
+    <div>軌道データ: <a href="https://celestrak.org/" rel="noopener">CelesTrak</a>（ISS, NORAD 25544）。位置の計算は satellite.js、地球の影と明るさは自前で計算。天気は <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a>。鉄道は <a href="https://www.odpt.org/" rel="noopener">公共交通オープンデータセンター</a>。時刻は日本時間。</div>
     <div>ODPTチャレンジ2026向けに開発中。</div>
   </footer>
 </main>

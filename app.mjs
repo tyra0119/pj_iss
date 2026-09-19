@@ -24,6 +24,20 @@ const minOfDay = (d, dateKey) => Math.round((d.getTime() - new Date(`${dateKey}T
 const fmtMin = (m) => { const h = Math.floor(m / 60), mm = String(m % 60).padStart(2, '0'); return h >= 24 ? `翌${h - 24}:${mm}` : `${h}:${mm}`; };
 const isHoliday = (dateKey) => [0, 6].includes(new Date(`${dateKey}T12:00:00+09:00`).getDay());
 
+// ---------- 画面（① 日と出発駅 / ② 観測場所 / ③ 計画 / ④ 見方と説明） ----------
+const enabledScreens = new Set([1, 4]);
+function showScreen(n) {
+  for (const k of [1, 2, 3, 4]) $(`#screen${k}`).hidden = k !== n;
+  document.querySelectorAll('.steps button').forEach((b) => {
+    const k = Number(b.dataset.go);
+    b.disabled = !enabledScreens.has(k);
+    if (k === n) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function enableScreen(n) { enabledScreens.add(n); document.querySelectorAll('.steps button').forEach((b) => { if (Number(b.dataset.go) === n) b.disabled = false; }); }
+function disableScreens(...ns) { for (const n of ns) enabledScreens.delete(n); document.querySelectorAll('.steps button').forEach((b) => { if (ns.includes(Number(b.dataset.go))) b.disabled = true; }); }
+
 const state = {
   satrec: null, sites: [], stations: [], rows: [], transit: null,
   dateKey: null, pass: null, entries: [], from: null, // from: 出発地 {id, name, lat, lon, lines}
@@ -97,7 +111,7 @@ function renderLists(rows) {
     const tr = row(r);
     tr.className = 'day-row';
     tr.title = 'この日を調べる';
-    tr.addEventListener('click', () => { $('#plan [name=date]').value = r.night; runPlan().catch(showError); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    tr.addEventListener('click', () => { $('#plan [name=date]').value = r.night; runPlan().catch(showError); });
     tbE.appendChild(tr);
     lastNight = r.night;
   }
@@ -108,7 +122,7 @@ function renderLists(rows) {
     const tr = row(r);
     tr.className = 'day-row';
     tr.title = '前の晩から出かけて始発で帰る計画を見る';
-    tr.addEventListener('click', () => { $('#plan [name=date]').value = r.night; runPlan().catch(showError); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    tr.addEventListener('click', () => { $('#plan [name=date]').value = r.night; runPlan().catch(showError); });
     tbM.appendChild(tr);
   }
 }
@@ -191,7 +205,9 @@ async function selectPass(r, kind = 'evening') {
   $('#recoCard').hidden = false;
   $('#reco').innerHTML = '<p class="muted">候補地と天気と経路を調べています…</p>';
   $('#sites tbody').replaceChildren();
+  $('#goBest').hidden = true;
   state.plan = null;
+  disableScreens(3);
 
   const daysAhead = (new Date(`${state.dateKey}T12:00:00+09:00`) - new Date()) / 86400e3;
   let entries;
@@ -202,7 +218,7 @@ async function selectPass(r, kind = 'evening') {
   } else {
     $('#sitesNote').textContent = '天気を取得中…';
     try {
-      const hourly = await fetchHourly(state.sites);
+      const hourly = await hourlyAll();
       entries = state.sites.map((s, i) => ({ site: s, w: assessSite(hourly[i], r.peak.d), pass: sitePass(s, r) }));
       withWeather = true;
       const okCount = entries.filter((e) => e.w.available && e.w.observable).length;
@@ -340,9 +356,9 @@ function renderSites(entries, withWeather) {
       + `<td class="num">${travel}</td>`
       + `<td class="num">${cloud}</td><td>${obsBadge}</td>`
       + `<td class="wrap small ${warns.length ? 'warn' : 'muted'}">${warns.length ? warns.join('<br>') : (e.w.available ? '特になし' : '')}</td>`
-      + `<td>${e.pass ? '<button type="button" class="small">計画</button>' : ''}</td>`;
+      + `<td>${e.pass ? '<button type="button" class="small primary">ここで見る →</button>' : ''}</td>`;
     tr.className = 'site-row';
-    tr.addEventListener('click', () => selectSite(e, tr, { scroll: true }));
+    tr.addEventListener('click', () => selectSite(e, tr, { go: true }));
     tb.appendChild(tr);
   });
 }
@@ -362,6 +378,10 @@ async function renderRecommendation(entries, withWeather) {
   if (!pick) { box.innerHTML = cloudyNote || '<p class="ng">この日に条件を満たす候補地がありません。</p>'; $('#onsiteCard').hidden = true; return; }
   state.plan = { good: pickFrom, withWeather, cloudyNote, best: pick };
   const tr = [...document.querySelectorAll('#sites tr.site-row')][entries.indexOf(pick)];
+  const btn = $('#goBest');
+  btn.hidden = false;
+  btn.textContent = `${cloudyNote ? '参考: ' : 'おすすめ: '}${pick.site.name} で計画を見る →`;
+  btn.onclick = () => selectSite(pick, tr, { go: true });
   return selectSite(pick, tr);
 }
 
@@ -506,7 +526,7 @@ async function renderTrainInfo(best, good) {
     el.querySelectorAll('button[data-alt]').forEach((b) => b.addEventListener('click', () => {
       const e = state.entries.find((x) => x.site.id === b.dataset.alt);
       const tr = [...document.querySelectorAll('#sites tr.site-row')][state.entries.indexOf(e)];
-      selectSite(e, tr, { scroll: true });
+      selectSite(e, tr, { go: true });
     }));
   } catch (err) {
     el.innerHTML = `<span class="warn">運行情報を取得できませんでした（${esc(err.message)}）。</span>`;
@@ -514,13 +534,14 @@ async function renderTrainInfo(best, good) {
 }
 
 // ---------- 現地 ----------
-async function selectSite(e, tr, { scroll = false } = {}) {
+async function selectSite(e, tr, { go = false } = {}) {
   if (!e?.pass) return;
   state.site = e.site;
   state.sitePass = e.pass;
   if (state.plan) {
     renderPlanFor(e, state.plan.good, state.plan.withWeather, state.plan.cloudyNote);
-    if (scroll) $('#recoCard').scrollIntoView({ behavior: 'smooth' });
+    enableScreen(3);
+    if (go) showScreen(3);
   }
   document.querySelectorAll('#sites tr.site-row').forEach((x) => x.classList.toggle('selected', x === tr));
   $('#onsiteCard').hidden = false;
@@ -533,7 +554,7 @@ async function selectSite(e, tr, { scroll = false } = {}) {
 
 // ---------- 入力 ----------
 function readFrom() {
-  const v = $('#plan [name=from]').value;
+  const v = $('#fromForm [name=from]').value;
   if (!v) { state.from = null; return; }
   if (v === 'geo') {
     if (state.from?.id === 'geo') return;
@@ -552,8 +573,60 @@ async function runPlan() {
   state.dateKey = $('#plan [name=date]').value;
   readFrom();
   const plan = planForDate(state.dateKey);
+  enableScreen(2);
+  showScreen(2);
   renderHeadline(state.dateKey, plan, new Date());
   $('#status').textContent = '';
+}
+
+// ---------- ① 提案一覧 ----------
+let hourlyCache = null;
+async function hourlyAll() {
+  if (hourlyCache && Date.now() - hourlyCache.at < 10 * 60e3) return hourlyCache.data;
+  const data = await fetchHourly(state.sites);
+  hourlyCache = { at: Date.now(), data };
+  return data;
+}
+async function renderProposals() {
+  const now = new Date();
+  const ev = state.rows.filter((r) => r.slot === 'evening' && r.visEnd > now);
+  const mo = state.rows.filter((r) => r.slot === 'morning' && r.visEnd > now);
+  let hourly = null;
+  try { hourly = await hourlyAll(); } catch { hourly = null; }
+  const item = (r, kind) => {
+    const daysAhead = (r.peak.d - now) / 86400e3;
+    let where = '';
+    let cls = '';
+    if (hourly && daysAhead < FORECAST_DAYS - 1) {
+      const scored = state.sites.map((s, i) => ({ s, w: assessSite(hourly[i], r.peak.d) })).filter((x) => x.w.available);
+      const clear = scored.filter((x) => x.w.observable);
+      if (clear.length) {
+        // 雲が少なく、出発駅が選ばれていれば近い場所
+        for (const x of clear) x.travel = state.from ? computeTravel(x.s) : null;
+        clear.sort((p, q) => (p.w.obs.cloudLowMid * 3 + (p.travel ? p.travel.totalMin : p.s.walkMin)) - (q.w.obs.cloudLowMid * 3 + (q.travel ? q.travel.totalMin : q.s.walkMin)));
+        const b = clear[0];
+        where = `<div class="where"><span class="acc">おすすめ</span> ${esc(b.s.name)}<span class="meta">（雲${b.w.obs.cloudLowMid}%${b.travel ? `・${esc(state.from.name)}から約${b.travel.totalMin}分` : `・${esc(b.s.station)}駅 徒歩${b.s.walkMin}分`}）。ほか${clear.length - 1}か所が晴れの見込み</span></div>`;
+      } else {
+        where = '<div class="where ng">どの候補地も雲が多い見込み。近づいたら変わるかもしれません</div>';
+        cls = 'dim';
+      }
+    } else {
+      where = `<div class="where meta">天気予報は${FORECAST_DAYS}日前から。近づいたら場所を提案します</div>`;
+    }
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `proposal ${cls}`;
+    b.innerHTML = `<div class="when">${md(r.night)} ${kind === 'morning' ? '翌朝 ' : ''}${hhmm(r.visStart)}〜${hhmm(r.visEnd)} <span class="meta">最大の高さ${r.maxEl.toFixed(0)}°・${dir16(r.start.az)}から${dir16(r.end.az)}へ${kind === 'morning' ? '・始発で帰る' : ''}</span></div>${where}`;
+    b.addEventListener('click', () => { $('#plan [name=date]').value = r.night; runPlan().catch(showError); });
+    return b;
+  };
+  const box = $('#proposals');
+  box.replaceChildren(...ev.map((r) => item(r, 'evening')));
+  $('#morningProposals').replaceChildren(...mo.map((r) => item(r, 'morning')));
+  const w = windowOf(ev);
+  $('#proposalsNote').textContent = ev.length
+    ? `夕方に見える日が${new Set(ev.map((r) => r.night)).size}日あります。いちばん近いのは ${md(w.from)}${w.count > 1 ? `〜${md(w.to)}` : ''}。押すと観測場所を選べます。`
+    : '60日以内に夕方に見える日はありません。';
 }
 
 async function init() {
@@ -574,22 +647,30 @@ async function init() {
   state.sites = sitesJson.sites;
   state.stations = stationsJson.stations;
   state.transit = transit;
-  const sel = $('#plan [name=from]');
+  const sel = $('#fromForm [name=from]');
   for (const s of state.stations) {
     const o = document.createElement('option');
     o.value = s.id; o.textContent = s.name;
     sel.appendChild(o);
   }
   try { const saved = localStorage.getItem('fromStation'); if (saved) sel.value = saved; } catch { /* ignore */ }
-  sel.addEventListener('change', () => { try { localStorage.setItem('fromStation', sel.value); } catch { /* ignore */ } });
+  sel.addEventListener('change', () => { try { localStorage.setItem('fromStation', sel.value); } catch { /* ignore */ } readFrom(); renderProposals().catch(console.error); if (state.pass) runPlanKeepScreen().catch(showError); });
   const ep = tleEpoch(state.satrec);
   $('#tleInfo').textContent = `軌道データ: ${source}。基準時刻 ${jst(ep).toISOString().replace('T', ' ').slice(0, 16)}。基準時刻から日が離れるほど、予測時刻が数分ずれます。`
     + (transit ? ` 鉄道の経路と始発・終電は公共交通オープンデータセンター（ODPT）の路線・駅・時刻表データ（${transit.data.generated.slice(0, 10)} 取得）から計算。` : ' 鉄道データを読み込めなかったため、所要時間は距離からの概算です。');
   const obs = observer(CENTER.lat, CENTER.lon);
   state.rows = computeRows(obs, new Date(now.getTime() - 20 * 60e3), new Date(now.getTime() + DAYS * 86400e3));
   renderLists(state.rows);
+  readFrom();
   $('#status').textContent = '';
-  await runPlan();
+  showScreen(1);
+  await renderProposals();
+}
+
+// 出発駅を変えたときに、今の日付の計画を作り直す（画面は動かさない）
+async function runPlanKeepScreen() {
+  const plan = planForDate(state.dateKey);
+  renderHeadline(state.dateKey, plan, new Date());
 }
 
 function showError(err) {
@@ -600,6 +681,8 @@ function showError(err) {
 }
 
 $('#plan').addEventListener('submit', (e) => { e.preventDefault(); runPlan().catch(showError); });
+$('#fromForm').addEventListener('submit', (e) => e.preventDefault());
+document.querySelectorAll('button[data-go]').forEach((b) => b.addEventListener('click', () => { const n = Number(b.dataset.go); if (enabledScreens.has(n)) showScreen(n); }));
 $('#compassBtn').addEventListener('click', async () => {
   if (!state.sitePass) return;
   $('#compassStatus').textContent = '';
