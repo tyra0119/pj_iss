@@ -55,6 +55,10 @@
   .timeline th{width:3.5em;color:var(--accent);white-space:nowrap}
   .timeline td{white-space:normal}
   button.link{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
+  .legs{margin:6px 0 2px;padding-left:1.3em}
+  .legs li{margin:3px 0;white-space:normal}
+  .packing{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  .packing summary{color:var(--fg);font-weight:700}
   select{background:#0b1020;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit}
 </style>
 </head>
@@ -87,7 +91,7 @@
     <h2>観測場所の候補</h2>
     <p id="sitesNote" class="muted small"></p>
     <div class="scroll"><table id="sites"><thead><tr><th>順位</th><th>場所</th><th>最寄駅</th><th class="num">所要の目安</th><th class="num">雲（低い雲＋中間の雲）</th><th>観測</th><th class="wrap">移動の注意</th><th></th></tr></thead><tbody></tbody></table></div>
-    <p class="muted small">候補地は初版の手作業リストです。夜間に入れるか、照明や周囲の建物で見えにくくないかは、まだ現地確認していません。</p>
+    <p class="muted small">所要時間は ODPT の路線・駅・時刻表データから計算した鉄道経路（徒歩と乗換の待ちを含む）です。* が付いたものは駅データに無いため距離からの概算です。候補地の行を押すと、その場所の計画と地図に切り替わります。</p>
   </div>
 
   <div id="onsiteCard" class="card" hidden>
@@ -129,7 +133,7 @@
   </div>
 
   <div class="card">
-    <details><summary>夜明け前（4〜5時台）に見えるもの。電車が動いていないので参考まで</summary>
+    <details><summary>夜明け前（4〜5時台）に見えるもの。前の晩に出かけて始発で帰る計画になります</summary>
     <div class="scroll"><table id="morning"><thead><tr><th>日付</th><th>見え始め</th><th>最高</th><th>見え終わり</th><th>方向</th><th class="num">最大の高さ</th><th class="num">明るさ</th></tr></thead><tbody></tbody></table></div>
     </details>
   </div>

@@ -120,11 +120,13 @@ export async function fetchTrainInformation() {
  * 路線名の配列について、運行情報を照合する
  * @returns {Promise<Array<{line:string, supported:boolean, text:string|null, delayed:boolean}>|null>}
  */
-export async function lineStatuses(lineNames) {
+export async function lineStatuses(lines) {
   const all = await fetchTrainInformation();
   if (!all) return null;
-  return lineNames.map((line) => {
-    const id = RAILWAY_IDS[line];
+  return lines.map((item) => {
+    // item は 路線名（RAILWAY_IDS のキー）か { id: 'odpt.Railway:…', name } のどちらか
+    const line = typeof item === 'string' ? item : item.name;
+    const id = typeof item === 'string' ? RAILWAY_IDS[item] : item.id;
     if (!id) return { line, supported: false, text: null, delayed: false };
     const operator = id.replace('odpt.Railway:', 'odpt.Operator:').split('.').slice(0, 2).join('.');
     const hit = all.find((x) => x['odpt:railway'] === id)
