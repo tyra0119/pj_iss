@@ -5,8 +5,8 @@
    "id": "futako",
    "name": "多摩川河川敷（二子玉川・兵庫島公園）",
    "pref": "東京",
-   "lat": 35.61223,
-   "lon": 139.6226,
+   "lat": 35.61052,
+   "lon": 139.62681,
    "station": "二子玉川",
    "lines": [
     "東急田園都市線",
@@ -14,17 +14,19 @@
    ],
    "walkMin": 5,
    "type": "河川敷",
-   "landmark": "兵庫島公園の土手の上。川の方（南西）が開けている",
+   "landmark": "兵庫島公園の土手の上。川の方（南西）が開けている。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "兵庫島公園は世田谷区立公園だが河川敷の一部で終日立入可。駅→地点 直線 596 m ≒ 7 分（現行 5 分）"
+   "verifyNotes": "兵庫島公園は世田谷区立公園だが河川敷の一部で終日立入可。駅→地点 直線 596 m ≒ 7 分（現行 5 分） 2026-09-20: 水際から 100 m 内側、駅から 194 m、幹線道路まで 123 m（元の地点から 426 m）",
+   "roadNearby": false,
+   "majorRoadM": 123
   },
   {
    "id": "marukobashi",
    "name": "多摩川河川敷（丸子橋）",
    "pref": "東京",
-   "lat": 35.58488,
-   "lon": 139.66788,
+   "lat": 35.58875,
+   "lon": 139.66779,
    "station": "多摩川",
    "lines": [
     "東急東横線",
@@ -33,68 +35,76 @@
    ],
    "walkMin": 5,
    "type": "河川敷",
-   "landmark": "丸子橋のたもとの土手。南〜西が開けている",
+   "landmark": "丸子橋のたもとの土手。南〜西が開けている。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "駅→地点 直線 264 m ≒ 3 分（現行 5 分）"
+   "verifyNotes": "駅→地点 直線 264 m ≒ 3 分（現行 5 分） 2026-09-20: 水際から 100 m 内側、駅から 111 m、幹線道路まで 81 m（元の地点から 430 m）",
+   "roadNearby": true,
+   "majorRoadM": 81
   },
   {
    "id": "rokugo",
    "name": "多摩川河川敷（六郷土手）",
    "pref": "東京",
-   "lat": 35.54367,
-   "lon": 139.71278,
+   "lat": 35.53779,
+   "lon": 139.70758,
    "station": "六郷土手",
    "lines": [
     "京急本線"
    ],
    "walkMin": 3,
    "type": "河川敷",
-   "landmark": "六郷橋の上流側の土手。川崎方向（南西）が開けている",
+   "landmark": "六郷橋の上流側の土手。川崎方向（南西）が開けている。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "駅→地点 直線 571 m ≒ 7 分（現行 3 分）"
+   "verifyNotes": "駅→地点 直線 571 m ≒ 7 分（現行 3 分） 2026-09-20: 水際から 100 m 内側、駅から 333 m、幹線道路まで 81 m（元の地点から 806 m）",
+   "roadNearby": true,
+   "majorRoadM": 81
   },
   {
    "id": "korekasa",
    "name": "多摩川河川敷（是政橋）",
    "pref": "東京",
-   "lat": 35.65363,
-   "lon": 139.48785,
+   "lat": 35.65456,
+   "lon": 139.48873,
    "station": "是政",
    "lines": [
     "西武多摩川線"
    ],
    "walkMin": 5,
    "type": "河川敷",
-   "landmark": "是政橋の府中側の土手。全方位が開けている",
+   "landmark": "是政橋の府中側の土手。全方位が開けている。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "駅→地点 直線 309 m ≒ 4 分（現行 5 分）"
+   "verifyNotes": "駅→地点 直線 309 m ≒ 4 分（現行 5 分） 2026-09-20: 水際から 100 m 内側、駅から 194 m、幹線道路まで 125 m（元の地点から 131 m）",
+   "roadNearby": false,
+   "majorRoadM": 125
   },
   {
    "id": "hinobashi",
    "name": "多摩川河川敷（日野橋・立川）",
    "pref": "東京",
-   "lat": 35.688,
-   "lon": 139.415,
+   "lat": 35.68609,
+   "lon": 139.4092,
    "station": "柴崎体育館",
    "lines": [
     "多摩モノレール"
    ],
    "walkMin": 5,
    "type": "河川敷",
-   "landmark": "日野橋の立川側の土手。西〜南が開けている",
+   "landmark": "日野橋の立川側の土手。西〜南が開けている。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "駅→地点 直線 549 m ≒ 7 分（現行 5 分）"
+   "verifyNotes": "駅→地点 直線 549 m ≒ 7 分（現行 5 分） 2026-09-20: 水際から 100 m 内側、駅から 413 m、幹線道路まで 113 m（元の地点から 565 m）",
+   "roadNearby": true,
+   "majorRoadM": 113
   },
   {
    "id": "iwabuchi",
    "name": "荒川河川敷（岩淵水門）",
    "pref": "東京",
-   "lat": 35.78562,
-   "lon": 139.73012,
+   "lat": 35.78599,
+   "lon": 139.72372,
    "station": "赤羽岩淵",
    "lines": [
     "東京メトロ南北線",
@@ -102,10 +112,12 @@
    ],
    "walkMin": 10,
    "type": "河川敷",
-   "landmark": "荒川知水資料館の前の土手。北〜東が開けている",
+   "landmark": "荒川知水資料館の前の土手。北〜東が開けている。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "地名上の岩淵水門は現在値より東に約1 km。。駅→地点 直線 762 m ≒ 10 分（現行 10 分）"
+   "verifyNotes": "地名上の岩淵水門は現在値より東に約1 km。。駅→地点 直線 762 m ≒ 10 分（現行 10 分） 2026-09-20: 水際から 100 m 内側、駅から 327 m、幹線道路まで 119 m（元の地点から 579 m）",
+   "roadNearby": true,
+   "majorRoadM": 119
   },
   {
    "id": "horikiri",
@@ -119,27 +131,31 @@
    ],
    "walkMin": 10,
    "type": "河川敷",
-   "landmark": "堀切橋の下流側の土手。西〜南が開けている",
+   "landmark": "堀切橋の下流側の土手。西〜南が開けている。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "駅→地点 直線 652 m ≒ 8 分（現行 10 分）"
+   "verifyNotes": "駅→地点 直線 652 m ≒ 8 分（現行 10 分）",
+   "roadNearby": true,
+   "majorRoadM": 117
   },
   {
    "id": "hirai",
    "name": "荒川河川敷（平井）",
    "pref": "東京",
-   "lat": 35.7136,
-   "lon": 139.849,
+   "lat": 35.70859,
+   "lon": 139.84018,
    "station": "平井",
    "lines": [
     "JR総武線"
    ],
    "walkMin": 10,
    "type": "河川敷",
-   "landmark": "平井大橋の上流側の土手。西が開けている",
+   "landmark": "平井大橋の上流側の土手。西が開けている。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "平井大橋は駅から約1.1 km。駅から最短の荒川土手は西へ約600 m(平井5丁目付近)なので、より近い地点を採用してもよい。駅→地点 直線 967 m ≒ 12 分（現行 10 分）"
+   "verifyNotes": "平井大橋は駅から約1.1 km。駅から最短の荒川土手は西へ約600 m(平井5丁目付近)なので、より近い地点を採用してもよい。駅→地点 直線 967 m ≒ 12 分（現行 10 分） 2026-09-20: 水際から 100 m 内側、駅から 310 m、幹線道路まで 120m以上（元の地点から 972 m）",
+   "roadNearby": false,
+   "majorRoadM": 125
   },
   {
    "id": "kasai",
@@ -158,7 +174,9 @@
    "nightAccess": "常時開園",
    "hoursQuote": "常時開園（サービスセンター及び各施設は年末年始は休業）",
    "sourceUrl": "https://www.tokyo-park.or.jp/park/kasairinkai/",
-   "verifyNotes": "展望レストハウス等の施設は17:00閉館だが園地は常時開園。駅→地点 直線 301 m ≒ 4 分（現行 3 分）"
+   "verifyNotes": "展望レストハウス等の施設は17:00閉館だが園地は常時開園。駅→地点 直線 301 m ≒ 4 分（現行 3 分）",
+   "roadNearby": false,
+   "majorRoadM": null
   },
   {
    "id": "yumenoshima",
@@ -179,7 +197,9 @@
    "nightAccess": "常時開園",
    "hoursQuote": "常時開園（サービスセンター及び各施設は年末年始は休業）",
    "sourceUrl": "https://www.tokyo-park.or.jp/park/yumenoshima/",
-   "verifyNotes": "駅→地点 直線 770 m ≒ 10 分（現行 7 分）"
+   "verifyNotes": "駅→地点 直線 770 m ≒ 10 分（現行 7 分）",
+   "roadNearby": false,
+   "majorRoadM": 197
   },
   {
    "id": "odaiba",
@@ -197,7 +217,9 @@
    "verified": false,
    "nightAccess": "不明",
    "sourceUrl": "https://www.tptc.co.jp/park/01_02",
-   "verifyNotes": "管理者(東京港埠頭(株) 海上公園なび)の公園ページ・Q&Aに開園時間の記載なし(駐車場は「24時間営業」)。観光サイトでは終日開放とされ実態は夜間立入可と思われるが公式の文言は未確認。gotokyo.org は「お台場海浜公園駅ゆりかもめ徒歩5分」。駅→地点 直線 167 m ≒ 2 分（現行 3 分）"
+   "verifyNotes": "管理者(東京港埠頭(株) 海上公園なび)の公園ページ・Q&Aに開園時間の記載なし(駐車場は「24時間営業」)。観光サイトでは終日開放とされ実態は夜間立入可と思われるが公式の文言は未確認。gotokyo.org は「お台場海浜公園駅ゆりかもめ徒歩5分」。駅→地点 直線 167 m ≒ 2 分（現行 3 分）",
+   "roadNearby": false,
+   "majorRoadM": 191
   },
   {
    "id": "toyosu",
@@ -216,7 +238,9 @@
    "nightAccess": "常時開園",
    "hoursQuote": "当公園は３６５日２４時間、開園しております。",
    "sourceUrl": "https://toyosugururi.jp/faq/",
-   "verifyNotes": "指定管理者(豊洲ぐるりパーク)公式FAQ。江東区ページには開園時間記載なし(パークセンター受付 9:00-17:00)。駅→地点 直線 776 m ≒ 10 分（現行 8 分）"
+   "verifyNotes": "指定管理者(豊洲ぐるりパーク)公式FAQ。江東区ページには開園時間記載なし(パークセンター受付 9:00-17:00)。駅→地点 直線 776 m ≒ 10 分（現行 8 分）",
+   "roadNearby": false,
+   "majorRoadM": null
   },
   {
    "id": "oi",
@@ -230,12 +254,14 @@
    ],
    "walkMin": 8,
    "type": "海浜公園",
-   "landmark": "なぎさの森の海側。東〜南が開けている",
+   "landmark": "なぎさの森の海側の遊歩道。園路を海側へ進み、幹線道路（湾岸道路）から離れる",
    "verified": false,
    "nightAccess": "不明",
    "hoursQuote": "管理舎 9：00〜20：00 (12月29日〜1月3日を除く)",
    "sourceUrl": "https://tokyo-south-seaside-parks.com/oi-park/",
-   "verifyNotes": "管理者サイトに園地の開園時間の明記なし(管理舎 9:00-20:00、自然観察路 9:00-17:00 月曜休)。観光サイトでは「終日」。公式アクセス: 「大井競馬場前 下車 徒歩8分」(https://tokyo-south-seaside-parks.com/sports-access/)。駅→地点 直線 917 m ≒ 11 分（現行 10 分）"
+   "verifyNotes": "管理者サイトに園地の開園時間の明記なし(管理舎 9:00-20:00、自然観察路 9:00-17:00 月曜休)。観光サイトでは「終日」。公式アクセス: 「大井競馬場前 下車 徒歩8分」(https://tokyo-south-seaside-parks.com/sports-access/)。駅→地点 直線 917 m ≒ 11 分（現行 10 分）",
+   "roadNearby": true,
+   "majorRoadM": 15
   },
   {
    "id": "yoyogi",
@@ -255,7 +281,9 @@
    "nightAccess": "常時開園",
    "hoursQuote": "常時開園（サービスセンター及び各施設は年末年始は休業）",
    "sourceUrl": "https://www.tokyo-park.or.jp/park/yoyogi/",
-   "verifyNotes": "公式表記「開園日 常時開園」。駅→地点 直線 690 m ≒ 9 分（現行 5 分）"
+   "verifyNotes": "公式表記「開園日 常時開園」。駅→地点 直線 690 m ≒ 9 分（現行 5 分）",
+   "roadNearby": false,
+   "majorRoadM": null
   },
   {
    "id": "komazawa",
@@ -274,7 +302,9 @@
    "nightAccess": "常時開園",
    "hoursQuote": "常時開園（サービスセンター及び各施設は年末年始は休業）",
    "sourceUrl": "https://www.tokyo-park.or.jp/park/komazawa-olympic/index.html",
-   "verifyNotes": "公式アクセス「東急田園都市線「駒沢大学駅」下車 徒歩15分」。駅→地点 直線 800 m ≒ 10 分（現行 15 分）"
+   "verifyNotes": "公式アクセス「東急田園都市線「駒沢大学駅」下車 徒歩15分」。駅→地点 直線 800 m ≒ 10 分（現行 15 分）",
+   "roadNearby": false,
+   "majorRoadM": null
   },
   {
    "id": "hikarigaoka",
@@ -293,14 +323,16 @@
    "nightAccess": "常時開園",
    "hoursQuote": "常時開園（サービスセンター及び各施設は年末年始は休業）",
    "sourceUrl": "https://www.tokyo-park.or.jp/park/hikarigaoka/",
-   "verifyNotes": "公式アクセス「光が丘」から「徒歩8分」。駅→地点 直線 819 m ≒ 10 分（現行 8 分）"
+   "verifyNotes": "公式アクセス「光が丘」から「徒歩8分」。駅→地点 直線 819 m ≒ 10 分（現行 8 分）",
+   "roadNearby": false,
+   "majorRoadM": null
   },
   {
    "id": "toneri",
    "name": "舎人公園",
    "pref": "東京",
-   "lat": 35.79866,
-   "lon": 139.77332,
+   "lat": 35.79758,
+   "lon": 139.77183,
    "station": "舎人公園",
    "lines": [
     "日暮里・舎人ライナー"
@@ -312,7 +344,9 @@
    "nightAccess": "常時開園",
    "hoursQuote": "常時開園（サービスセンター及び各施設は年末年始は休業）",
    "sourceUrl": "https://www.tokyo-park.or.jp/park/toneri/",
-   "verifyNotes": "駅は公園に隣接(徒歩1分)だが大池周辺までは約5分。駅→地点 直線 376 m ≒ 5 分（現行 1 分）"
+   "verifyNotes": "駅は公園に隣接(徒歩1分)だが大池周辺までは約5分。駅→地点 直線 376 m ≒ 5 分（現行 1 分） 2026-09-20: 水域だったため駅側へ 180 m 移動",
+   "roadNearby": false,
+   "majorRoadM": 185
   },
   {
    "id": "inokashira",
@@ -332,7 +366,9 @@
    "nightAccess": "常時開園",
    "hoursQuote": "常時開園（サービスセンター及び各施設は年末年始は休業）",
    "sourceUrl": "https://www.tokyo-park.or.jp/park/inokashira/",
-   "verifyNotes": "駅→地点 直線 374 m ≒ 5 分（現行 5 分）"
+   "verifyNotes": "駅→地点 直線 374 m ≒ 5 分（現行 5 分）",
+   "roadNearby": false,
+   "majorRoadM": null
   },
   {
    "id": "koganei",
@@ -351,14 +387,16 @@
    "nightAccess": "常時開園",
    "hoursQuote": "常時開園（サービスセンター及び各施設は年末年始は休業）",
    "sourceUrl": "https://www.tokyo-park.or.jp/park/koganei/",
-   "verifyNotes": "公式は花小金井からバス案内のみ(徒歩分記載なし)。駅→公園重心 約1.2 km ≒ 15分。駅→地点 直線 1224 m ≒ 15 分（現行 15 分）"
+   "verifyNotes": "公式は花小金井からバス案内のみ(徒歩分記載なし)。駅→公園重心 約1.2 km ≒ 15分。駅→地点 直線 1224 m ≒ 15 分（現行 15 分）",
+   "roadNearby": false,
+   "majorRoadM": null
   },
   {
    "id": "shinyoko",
    "name": "鶴見川河川敷（新横浜）",
    "pref": "神奈川",
-   "lat": 35.51421,
-   "lon": 139.61307,
+   "lat": 35.51146,
+   "lon": 139.61624,
    "station": "新横浜",
    "lines": [
     "JR横浜線",
@@ -367,10 +405,12 @@
    ],
    "walkMin": 10,
    "type": "河川敷",
-   "landmark": "新横浜大橋付近の土手。北〜東が開けている",
+   "landmark": "新横浜大橋付近の土手。北〜東が開けている。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "駅→地点 直線 782 m ≒ 10 分（現行 10 分）"
+   "verifyNotes": "駅→地点 直線 782 m ≒ 10 分（現行 10 分） 2026-09-20: 水際から 100 m 内側、駅から 303 m、幹線道路まで 120m以上（元の地点から 419 m）",
+   "roadNearby": false,
+   "majorRoadM": null
   },
   {
    "id": "rinko",
@@ -388,7 +428,9 @@
    "verified": false,
    "nightAccess": "不明",
    "sourceUrl": "https://www.welcome.city.yokohama.jp/spot/details.php?bbid=760",
-   "verifyNotes": "横浜市観光サイト・MM.A.M.・パシフィコ横浜(管理者)いずれも開園時間の記載なし。民間観光サイトでは「24時間・年中無休」。公式アクセス「みなとみらい駅」より徒歩5分。駅→地点 直線 563 m ≒ 7 分（現行 7 分）"
+   "verifyNotes": "横浜市観光サイト・MM.A.M.・パシフィコ横浜(管理者)いずれも開園時間の記載なし。民間観光サイトでは「24時間・年中無休」。公式アクセス「みなとみらい駅」より徒歩5分。駅→地点 直線 563 m ≒ 7 分（現行 7 分）",
+   "roadNearby": false,
+   "majorRoadM": null
   },
   {
    "id": "yamashita",
@@ -406,31 +448,35 @@
    "verified": false,
    "nightAccess": "不明",
    "sourceUrl": "https://www.city.yokohama.lg.jp/kurashi/machizukuri-kankyo/midori-koen/koen/koen/daihyoteki/kouen008.html",
-   "verifyNotes": "横浜市公式ページに開園時間の記載なし(公式アクセス「元町・中華街駅出口「４」徒歩３分」)。柵のない開放型公園で通例夜間も立入可だが公式文言は未確認。駅→地点 直線 294 m ≒ 4 分（現行 3 分）"
+   "verifyNotes": "横浜市公式ページに開園時間の記載なし(公式アクセス「元町・中華街駅出口「４」徒歩３分」)。柵のない開放型公園で通例夜間も立入可だが公式文言は未確認。駅→地点 直線 294 m ≒ 4 分（現行 3 分）",
+   "roadNearby": true,
+   "majorRoadM": 87
   },
   {
    "id": "enoshima",
    "name": "片瀬海岸（江の島）",
    "pref": "神奈川",
-   "lat": 35.31,
-   "lon": 139.48,
+   "lat": 35.3093,
+   "lon": 139.4795,
    "station": "片瀬江ノ島",
    "lines": [
     "小田急江ノ島線"
    ],
    "walkMin": 3,
    "type": "海岸",
-   "landmark": "砂浜。南が海で全面開けている。暗くて条件が良い",
+   "landmark": "片瀬西浜の砂浜。国道134号から砂浜側へ降りる。南が海で全面開けている",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "駅→地点 直線 342 m ≒ 4 分（現行 3 分）"
+   "verifyNotes": "駅→地点 直線 342 m ≒ 4 分（現行 3 分） 2026-09-20: 国道134号の上だった地点を砂浜側へ 90 m 移動",
+   "roadNearby": true,
+   "majorRoadM": 90
   },
   {
    "id": "sagami",
    "name": "相模川河川敷（相模大橋・厚木）",
    "pref": "神奈川",
-   "lat": 35.44405,
-   "lon": 139.37269,
+   "lat": 35.44207,
+   "lon": 139.37481,
    "station": "厚木",
    "lines": [
     "小田急小田原線",
@@ -438,61 +484,69 @@
    ],
    "walkMin": 10,
    "type": "河川敷",
-   "landmark": "相模大橋の海老名側の土手。西が開けている",
+   "landmark": "相模大橋の海老名側の土手。西が開けている。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "駅→地点 直線 403 m ≒ 5 分（現行 10 分）"
+   "verifyNotes": "駅→地点 直線 403 m ≒ 5 分（現行 10 分） 2026-09-20: 水際から 100 m 内側、駅から 295 m、幹線道路まで 83 m（元の地点から 292 m）",
+   "roadNearby": true,
+   "majorRoadM": 83
   },
   {
    "id": "todabashi",
    "name": "荒川河川敷（戸田橋）",
    "pref": "埼玉",
-   "lat": 35.7987,
-   "lon": 139.6848,
+   "lat": 35.80433,
+   "lon": 139.68543,
    "station": "戸田公園",
    "lines": [
     "JR埼京線"
    ],
    "walkMin": 10,
    "type": "河川敷",
-   "landmark": "戸田橋の上流側の土手。南〜西が開けている",
+   "landmark": "戸田公園駅から南へ歩いた荒川の土手の上。戸田橋からは上流側に離れる（橋の上や道路脇は明るく車も多いので避ける）。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "駅→地点 直線 1239 m ≒ 15 分（現行 10 分）"
+   "verifyNotes": "駅→地点 直線 1239 m ≒ 15 分（現行 10 分） 2026-09-20: 水際から 100 m 内側、駅から 744 m、幹線道路まで 120m以上（元の地点から 628 m）",
+   "roadNearby": false,
+   "majorRoadM": 137
   },
   {
    "id": "misato",
    "name": "江戸川河川敷（三郷）",
    "pref": "埼玉",
-   "lat": 35.844,
-   "lon": 139.8935,
+   "lat": 35.84429,
+   "lon": 139.88843,
    "station": "三郷",
    "lines": [
     "JR武蔵野線"
    ],
    "walkMin": 8,
    "type": "河川敷",
-   "landmark": "三郷駅南側の土手。東〜南が開けている",
+   "landmark": "三郷駅南側の土手。東〜南が開けている。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "座標は推定値。駅→地点 直線 739 m ≒ 9 分（現行 8 分）"
+   "verifyNotes": "座標は推定値。駅→地点 直線 739 m ≒ 9 分（現行 8 分） 2026-09-20: 水際から 100 m 内側、駅から 156 m、幹線道路まで 120m以上（元の地点から 458 m）",
+   "roadNearby": false,
+   "majorRoadM": 168
   },
   {
    "id": "ichikawa",
    "name": "江戸川河川敷（市川橋）",
    "pref": "千葉",
-   "lat": 35.7345,
-   "lon": 139.8985,
+   "lat": 35.73192,
+   "lon": 139.90044,
    "station": "市川",
    "lines": [
     "JR総武線"
    ],
    "walkMin": 10,
    "type": "河川敷",
-   "landmark": "市川橋の下流側の土手。西（東京側）が開けている",
+   "landmark": "市川橋の下流側の土手。西（東京側）が開けている。土手の上か河川敷の中で、橋や道路の明かりから離れた所に立つ",
    "verified": true,
    "nightAccess": "河川敷・海岸",
-   "verifyNotes": "駅→地点 直線 1081 m ≒ 14 分（現行 10 分）"
+   "verifyNotes": "駅→地点 直線 1081 m ≒ 14 分（現行 10 分） 2026-09-20: 水際から 100 m 内側、駅から 775 m、幹線道路まで 120m以上（元の地点から 337 m）",
+   "roadNearby": false,
+   "majorRoadM": 139
   },
   {
    "id": "makuhari",
@@ -511,7 +565,9 @@
    "nightAccess": "常時開園",
    "hoursQuote": "常時開放(日本庭園を除く)",
    "sourceUrl": "https://www.city.chiba.jp/toshi/koenryokuchi/ryokusei/keikaku/makuharikaihinkoen.html",
-   "verifyNotes": "千葉市ページ。アクセス「JR京葉線「海浜幕張駅」南口より徒歩10分（パークセンターまで）」。見浜園は9:00-17:00。駅→地点 直線 424 m ≒ 5 分（現行 10 分）"
+   "verifyNotes": "千葉市ページ。アクセス「JR京葉線「海浜幕張駅」南口より徒歩10分（パークセンターまで）」。見浜園は9:00-17:00。駅→地点 直線 424 m ≒ 5 分（現行 10 分）",
+   "roadNearby": false,
+   "majorRoadM": null
   },
   {
    "id": "inage",
@@ -530,7 +586,9 @@
    "nightAccess": "常時開園",
    "hoursQuote": "24時間営業",
    "sourceUrl": "https://sunsetbeachpark.jp/access/",
-   "verifyNotes": "指定管理者(SUNSET BEACH PARK INAGE)の営業時間欄。ウッドデッキ 6:00-22:00、第1・第2駐車場 6:00-22:00、市は「公園入口門扉の開放時間」変更を告知しており車両門扉は夜間閉鎖の可能性あり(徒歩は可)。公式は稲毛海岸駅からバス10分+徒歩5分を案内。駅→地点 直線 1433 m ≒ 18 分（現行 15 分）"
+   "verifyNotes": "指定管理者(SUNSET BEACH PARK INAGE)の営業時間欄。ウッドデッキ 6:00-22:00、第1・第2駐車場 6:00-22:00、市は「公園入口門扉の開放時間」変更を告知しており車両門扉は夜間閉鎖の可能性あり(徒歩は可)。公式は稲毛海岸駅からバス10分+徒歩5分を案内。駅→地点 直線 1433 m ≒ 18 分（現行 15 分）",
+   "roadNearby": false,
+   "majorRoadM": null
   }
  ]
 }

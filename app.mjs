@@ -1,12 +1,12 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=520b9e5-0920';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=520b9e5-0920';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=520b9e5-0920';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=520b9e5-0920';
-import { loadTransit } from './lib/transit.mjs?v=520b9e5-0920';
-import { packingList } from './lib/packing.mjs?v=520b9e5-0920';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs?v=520b9e5-0920';
-import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=520b9e5-0920';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, trainTypeJa } from './odpt.mjs?v=520b9e5-0920';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=e9adfac-0938';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=e9adfac-0938';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=e9adfac-0938';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=e9adfac-0938';
+import { loadTransit } from './lib/transit.mjs?v=e9adfac-0938';
+import { packingList } from './lib/packing.mjs?v=e9adfac-0938';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs?v=e9adfac-0938';
+import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=e9adfac-0938';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, trainTypeJa } from './odpt.mjs?v=e9adfac-0938';
 
 const DAYS = 60;
 const TZ = 9;
@@ -73,7 +73,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=520b9e5-0920');
+  const res = await fetch('./data/iss.tle?v=e9adfac-0938');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -250,6 +250,7 @@ async function selectPass(r, kind = 'evening') {
     else s += 500;
     s += e.travel ? e.travel.totalMin : e.site.walkMin;
     if (isFav(e.site.id)) s -= 60; // お気に入りは同じ天気なら優先
+    if (e.site.roadNearby) s += 15; // 幹線道路のそば（明るい・車が多い）は少し下げる
     return s;
   };
   entries.sort((a, b) => score(a) - score(b));
@@ -361,7 +362,8 @@ function renderSites(entries, withWeather) {
         : e.w.observable ? '<span class="badge ok">晴れ</span>' : '<span class="badge ng">雲</span>';
     const warns = warnsOf(e);
     const travel = e.travel ? `${state.from ? esc(state.from.name) + 'から' : ''}約${e.travel.totalMin}分${e.travel.source === 'estimate' ? '<span class="muted">（概算）</span>' : ''}` : '';
-    const access = e.site.nightAccess === '不明' ? '<div class="line warn">夜間に入れるか公式の記載が見つかっていません</div>' : e.site.nightAccess === '常時開園' ? '<div class="line">常時開園（公式サイトで確認）</div>' : '';
+    const access = (e.site.nightAccess === '不明' ? '<div class="line warn">夜間に入れるか公式の記載が見つかっていません</div>' : e.site.nightAccess === '常時開園' ? '<div class="line">常時開園（公式サイトで確認）</div>' : '')
+      + (e.site.roadNearby ? `<div class="line warn">近くに大きな道路（約${e.site.majorRoadM} m）。明るく車が多いので、道路から離れた側に立つ</div>` : '<div class="line">大きな道路から離れていて暗め</div>');
     card.className = `site-card${e.pass ? '' : ' dim'}`;
     card.innerHTML = `
       <div class="top">
@@ -490,6 +492,7 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
   if (tv) reason.push(`${esc(state.from.name)}から約${tv.totalMin}分`);
   reason.push(`${esc(best.site.station)}駅から徒歩${best.site.walkMin}分`);
   const warns = warnsOf(best);
+  if (best.site.roadNearby) warns.push(`近くに大きな道路（約${best.site.majorRoadM} m）。道路の明かりを背にして、離れた側に立つ`);
 
   // ---- 時刻 ----
   const obsStart = minOfDay(p.start.d, dayKey), obsEnd = minOfDay(p.end.d, dayKey);
@@ -502,6 +505,8 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
     const backFL = tv.back ? firstLastFor(tv.back, holiday) : null;                // 帰りの最初の区間（最寄駅側）の始発・終電
     const est = tv.source === 'estimate';
     const estNote = est ? '<span class="muted small">（この区間は ODPT の駅データに無いため距離からの概算）</span>' : '';
+    const transfers = tv.go ? tv.go.legs.filter((l) => l.type === 'transfer').length : 0;
+    const manyTransfers = transfers >= 2 ? '<p class="warn small">電車だと乗り換えが多い行き先です。バスの方が楽なことがあるので、下の Google マップ（バスを含む経路）も確かめてください。バスの時刻表はこのアプリではまだ扱えていません。</p>' : '';
     const goLegs = tv.go ? legsHtml(tv.go, `${esc(state.from.name)}${state.from.id === 'geo' ? 'から最寄駅へ歩く' : '駅の改札へ'}`, `${esc(best.site.station)}駅から徒歩${best.site.walkMin}分で <strong>${esc(best.site.name)}</strong>。${esc(best.site.landmark)}`) : '';
     const backLegs = tv.back ? legsHtml(tv.back, `${esc(best.site.name)}から${esc(best.site.station)}駅へ徒歩${best.site.walkMin}分`, `${esc(state.from.name)}${state.from.id === 'geo' ? '' : '駅'}に到着`) : '';
     if (!overnight) {
@@ -510,7 +515,7 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
       const tooLate = dayKey === localDate(now) && departBy < minOfDay(now, dayKey);
       const lastOk = backFL ? backFL.last >= leaveSite : null;
       timeline = `<table class="timeline"><tbody>
-        <tr><th>出発</th><td><strong class="${tooLate ? 'ng' : 'acc'}" id="departBy">${fmtMin(departBy)} まで</strong>に${esc(state.from.name)}を出る ${estNote}<div id="goTrain" class="muted small">乗る列車を時刻表から探しています…</div>${goLegs}<div class="small">${gmapsLink(state.from, best.site, 'Google マップで行きの経路を見る')}</div></td></tr>
+        <tr><th>出発</th><td><strong class="${tooLate ? 'ng' : 'acc'}" id="departBy">${fmtMin(departBy)} まで</strong>に${esc(state.from.name)}を出る ${estNote}<div id="goTrain" class="muted small">乗る列車を時刻表から探しています…</div>${manyTransfers}${goLegs}<div class="small">${gmapsLink(state.from, best.site, 'Google マップで行きの経路を見る')}</div></td></tr>
         <tr><th>到着</th><td><strong>${fmtMin(arriveBy)}</strong> までに現地へ。方角を合わせて待つ（下の地図とコンパス）</td></tr>
         <tr><th>観測</th><td><strong>${fmtMin(obsStart)}〜${fmtMin(obsEnd)}</strong>（約${Math.max(1, Math.round((obsEnd - obsStart)))}分）</td></tr>
         <tr><th>帰り</th><td>${fmtMin(leaveSite)} ごろ現地を出る<div id="backTrain"></div>${backLegs}<div class="small">${gmapsLinkBack(best.site, state.from, 'Google マップで帰りの経路を見る')}</div>${backFL ? `<div class="${lastOk === false ? 'ng' : 'small'}">${esc(backFL.station)}駅 ${esc(backFL.railway)}${backFL.toward ? `（${esc(backFL.toward)}方面）` : ''}の<strong>最終電車 ${fmtMin(backFL.last)}</strong>${holiday ? '（土休日ダイヤ）' : '（平日ダイヤ）'}${lastOk === false ? '。観測後では間に合いません。別の候補地を選んでください' : ''}</div>` : '<div class="muted small">帰りの最終電車の時刻は取得できませんでした</div>'}</td></tr>
@@ -782,8 +787,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=520b9e5-0920').then((r) => r.json()),
-    fetch('./data/stations.json?v=520b9e5-0920').then((r) => r.json()),
+    fetch('./data/sites.json?v=e9adfac-0938').then((r) => r.json()),
+    fetch('./data/stations.json?v=e9adfac-0938').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
