@@ -1,14 +1,14 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=f9463a6-1315';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=f9463a6-1315';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=f9463a6-1315';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=f9463a6-1315';
-import { loadTransit } from './lib/transit.mjs?v=f9463a6-1315';
-import { packingList } from './lib/packing.mjs?v=f9463a6-1315';
-import { randomTrivia } from './lib/trivia.mjs?v=f9463a6-1315';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg } from './illustrations.mjs?v=f9463a6-1315';
-import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=f9463a6-1315';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=f9463a6-1315';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=f9463a6-1315';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=db7b130-1321';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=db7b130-1321';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=db7b130-1321';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=db7b130-1321';
+import { loadTransit } from './lib/transit.mjs?v=db7b130-1321';
+import { packingList } from './lib/packing.mjs?v=db7b130-1321';
+import { randomTrivia } from './lib/trivia.mjs?v=db7b130-1321';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=db7b130-1321';
+import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=db7b130-1321';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=db7b130-1321';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=db7b130-1321';
 
 const DAYS = 60;
 const TZ = 9;
@@ -85,7 +85,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=f9463a6-1315');
+  const res = await fetch('./data/iss.tle?v=db7b130-1321');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -215,13 +215,58 @@ async function renderHeadline(dateKey, plan, now) {
   }
 }
 
+// ---------- 自分視点のアニメーション ----------
+// 実際の 2〜6 分を 10 秒で再生。顔の向き（画面の中心）は光をゆっくり追いかける
+const fp = { raf: null, t: 0, playing: false, pass: null, center: 0 };
+function fpDraw(t) {
+  const r = fp.pass;
+  const pos = passTrack(r).at(t);
+  // 顔の向き: 光の方角を少し遅れて追いかける（1 コマで差の 12% ずつ）
+  const rel = ((pos.az - fp.center + 540) % 360) - 180;
+  fp.center = (fp.center + rel * 0.12 + 360) % 360;
+  $('#firstPerson').innerHTML = firstPersonSvg(r, { t, centerAz: fp.center });
+  $('#fpSeek').value = String(Math.round(t * 1000));
+  const d = new Date(r.start.d.getTime() + t * (r.end.d - r.start.d));
+  $('#fpTime').textContent = `${new Date(d.getTime() + 9 * 3600e3).toISOString().slice(11, 19)}（出現から ${Math.round(t * (r.end.d - r.start.d) / 1000)} 秒）`;
+}
+function fpStop() { if (fp.raf) cancelAnimationFrame(fp.raf); fp.raf = null; fp.playing = false; const b = $('#fpPlay'); if (b) b.textContent = fp.t >= 1 ? '↻ もう一度' : '▶ 動きを見る'; }
+function fpPlay() {
+  if (fp.t >= 1) { fp.t = 0; fp.center = fp.pass.start.az; }
+  fp.playing = true; $('#fpPlay').textContent = '⏸ 一時停止';
+  const PLAY_MS = 10000;
+  let last = performance.now();
+  const step = (now) => {
+    if (!fp.playing) return;
+    fp.t = Math.min(1, fp.t + (now - last) / PLAY_MS); last = now;
+    fpDraw(fp.t);
+    if (fp.t >= 1) { fpStop(); return; }
+    fp.raf = requestAnimationFrame(step);
+  };
+  fp.raf = requestAnimationFrame(step);
+}
+function setupFirstPerson(r) {
+  fpStop();
+  fp.pass = r; fp.t = 0; fp.center = r.start.az;
+  fpDraw(0);
+  $('#fpPlay').textContent = '▶ 動きを見る';
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) setTimeout(() => { if (fp.pass === r && !fp.playing && fp.t === 0) fpPlay(); }, 800);
+}
+$('#fpPlay').addEventListener('click', () => { if (fp.playing) fpStop(); else fpPlay(); });
+$('#fpSeek').addEventListener('input', (e) => {
+  // つまみで飛んだときも、そこまで顔を追いかけてきた向きになるよう 0 から追従し直す
+  fpStop(); fp.t = Number(e.target.value) / 1000; fp.center = fp.pass.start.az;
+  const track = passTrack(fp.pass);
+  for (let k = 1; k <= 120; k++) { const q = track.at(fp.t * k / 120); const rel = ((q.az - fp.center + 540) % 360) - 180; fp.center = (fp.center + rel * 0.5 + 360) % 360; }
+  fpDraw(fp.t);
+});
+
 // ---------- 通過を選んだあと: 見方・候補地・おすすめ ----------
 async function selectPass(r, kind = 'evening') {
   state.pass = r;
   state.passKind = kind;
   $('#describe').innerHTML = describePass(r).map((t) => `<p>${t}</p>`).join('');
   $('#scene').innerHTML = observationSceneSvg(r);
-  $('#firstPerson').innerHTML = firstPersonSvg(r);
+  setupFirstPerson(r);
   $('#howto').innerHTML = HOW_TO_FIND.map((t) => `<li>${t}</li>`).join('');
   $('#howCard').hidden = false;
   $('#sitesCard').hidden = false;
@@ -919,8 +964,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=f9463a6-1315').then((r) => r.json()),
-    fetch('./data/stations.json?v=f9463a6-1315').then((r) => r.json()),
+    fetch('./data/sites.json?v=db7b130-1321').then((r) => r.json()),
+    fetch('./data/stations.json?v=db7b130-1321').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
