@@ -1,15 +1,15 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=6c79197-2105';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=6c79197-2105';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=6c79197-2105';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=6c79197-2105';
-import { loadTransit } from './lib/transit.mjs?v=6c79197-2105';
-import { packingList } from './lib/packing.mjs?v=6c79197-2105';
-import { randomTrivia } from './lib/trivia.mjs?v=6c79197-2105';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=6c79197-2105';
-import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=6c79197-2105';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=6c79197-2105';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=6c79197-2105';
-import { fetchWarnings } from './jma.mjs?v=6c79197-2105';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=fa7b552-2110';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=fa7b552-2110';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=fa7b552-2110';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=fa7b552-2110';
+import { loadTransit } from './lib/transit.mjs?v=fa7b552-2110';
+import { packingList } from './lib/packing.mjs?v=fa7b552-2110';
+import { randomTrivia } from './lib/trivia.mjs?v=fa7b552-2110';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=fa7b552-2110';
+import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=fa7b552-2110';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=fa7b552-2110';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=fa7b552-2110';
+import { fetchWarnings } from './jma.mjs?v=fa7b552-2110';
 
 const DAYS = 60;
 const TZ = 9;
@@ -86,7 +86,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=6c79197-2105');
+  const res = await fetch('./data/iss.tle?v=fa7b552-2110');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -329,7 +329,7 @@ async function selectPass(r, kind = 'evening') {
   const score = (e) => {
     if (!e.pass) return 1e9;
     let s = 0;
-    if (withWeather && e.w.available) s += (e.w.dangerous ? 3000 : e.w.fog ? 1200 : e.w.observable ? 0 : e.w.unstable ? 400 : 1000) + e.w.obs.cloudLowMid * 3 + (e.w.floodRisk && e.site.type === '河川敷' ? 60 : 0);
+    if (withWeather && e.w.available) s += (e.w.dangerous ? 3000 : (e.w.fog || e.w.snowNow) ? 1200 : e.w.observable ? 0 : e.w.unstable ? 400 : 1000) + e.w.obs.cloudLowMid * 3 + (e.w.floodRisk && e.site.type === '河川敷' ? 60 : 0);
     else s += 500;
     s += e.travel ? e.travel.totalMin : e.site.walkMin;
     if (e.travel && e.travel.totalMin > 90) s += (e.travel.totalMin - 90) * 2; // 片道 90 分を超える分は重く見る
@@ -483,7 +483,7 @@ function renderSites(entries, withWeather) {
     const cloud = e.w.available ? `${e.w.obs.cloudLowMid}%` : '予報なし';
     const obsBadge = !e.pass ? '<span class="badge ng">条件外</span>'
       : !e.w.available ? '<span class="badge">天気未定</span>'
-        : e.w.dangerous ? '<span class="badge ng">危険</span>' : e.w.fog ? '<span class="badge ng">霧・もや</span>' : e.w.observable ? '<span class="badge ok">晴れ</span>' : e.w.unstable ? `<span class="badge warn">雨の心配 ${e.w.obsPrecipProb}%</span>` : '<span class="badge ng">雲</span>';
+        : e.w.dangerous ? '<span class="badge ng">危険</span>' : e.w.snowNow ? '<span class="badge ng">雪</span>' : e.w.fog ? '<span class="badge ng">霧・もや</span>' : e.w.observable ? '<span class="badge ok">晴れ</span>' : e.w.unstable ? `<span class="badge warn">雨の心配 ${e.w.obsPrecipProb}%</span>` : '<span class="badge ng">雲</span>';
     const warns = warnsOf(e);
     const travel = e.travel ? `${state.from ? esc(state.from.name) + 'から' : ''}約${e.travel.totalMin}分${e.travel.source === 'estimate' ? '<span class="muted">（概算）</span>' : ''}` : '';
     const access = (e.site.nightAccess === '不明' ? '<div class="line warn">夜間に入れるか公式の記載が見つかっていません</div>' : e.site.nightAccess === '常時開園' ? '<div class="line">常時開園（公式サイトで確認）</div>' : '')
@@ -1003,8 +1003,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=6c79197-2105').then((r) => r.json()),
-    fetch('./data/stations.json?v=6c79197-2105').then((r) => r.json()),
+    fetch('./data/sites.json?v=fa7b552-2110').then((r) => r.json()),
+    fetch('./data/stations.json?v=fa7b552-2110').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
