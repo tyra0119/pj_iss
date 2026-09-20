@@ -1,12 +1,12 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs';
-import { loadTransit } from './lib/transit.mjs';
-import { packingList } from './lib/packing.mjs';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs';
-import { showSiteMap, startCompass, stopCompass } from './onsite.mjs';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, trainTypeJa } from './odpt.mjs';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=520b9e5-0920';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=520b9e5-0920';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=520b9e5-0920';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=520b9e5-0920';
+import { loadTransit } from './lib/transit.mjs?v=520b9e5-0920';
+import { packingList } from './lib/packing.mjs?v=520b9e5-0920';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs?v=520b9e5-0920';
+import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=520b9e5-0920';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, trainTypeJa } from './odpt.mjs?v=520b9e5-0920';
 
 const DAYS = 60;
 const TZ = 9;
@@ -73,7 +73,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle');
+  const res = await fetch('./data/iss.tle?v=520b9e5-0920');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -782,8 +782,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json').then((r) => r.json()),
-    fetch('./data/stations.json').then((r) => r.json()),
+    fetch('./data/sites.json?v=520b9e5-0920').then((r) => r.json()),
+    fetch('./data/stations.json?v=520b9e5-0920').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
