@@ -387,7 +387,7 @@ async function renderRecommendation(entries, withWeather) {
   let cloudyNote = '';
   let pickFrom = good;
   if (!best) {
-    cloudyNote = `<p class="headline ng">この日はどの候補地も雲が多い見込みです</p><p class="small">予報は変わります。前日と当日の夕方にもう一度調べてください。それでも雲なら、無理に出かけないのが正解です。下は<strong>もし晴れたら</strong>の参考プランです（雲が少ない順・近い順）。</p>`;
+    cloudyNote = `<p class="headline ng">この日はどの候補地も雲が多い見込みです</p><p class="small">予報は変わります。前日と当日の夕方にもう一度調べてください。それでも雲なら、無理に出かけないのが正解です。下は、雲が晴れた場合に向けた<strong>おすすめ</strong>の計画です（雲が少ない順・近い順）。</p>`;
     pickFrom = entries.filter((e) => e.pass);
   }
   const pick = best ?? pickFrom[0];
@@ -396,7 +396,7 @@ async function renderRecommendation(entries, withWeather) {
   const tr = [...document.querySelectorAll('#sitesList .site-card')][entries.indexOf(pick)];
   const btn = $('#goBest');
   btn.hidden = false;
-  btn.textContent = `${cloudyNote ? '参考: ' : 'おすすめ: '}${pick.site.name} で計画を見る →`;
+  btn.textContent = `おすすめ: ${pick.site.name} で計画を見る →`;
   btn.onclick = () => selectSite(pick, tr, { go: true });
   return selectSite(pick, tr);
 }
@@ -554,7 +554,7 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
 
   box.innerHTML = `
     ${cloudyNote}
-    <p class="headline"><span class="acc">${cloudyNote ? '参考' : isBest ? 'おすすめ' : '選んだ場所'}</span> ${esc(best.site.name)}</p>
+    <p class="headline"><span class="acc">${isBest ? 'おすすめ' : '選んだ場所'}</span> ${esc(best.site.name)}</p>
     ${!isBest && state.plan?.best ? `<p class="muted small">おすすめは ${esc(state.plan.best.site.name)} です。<button type="button" class="link" data-site="${esc(state.plan.best.site.id)}">おすすめに戻す</button></p>` : ''}
     <p class="small">${reason.join('。')}。${esc(best.site.landmark)}。</p>
     ${warns.length ? `<p class="warn small">注意: ${warns.join('、')}</p>` : ''}
