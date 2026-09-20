@@ -138,3 +138,65 @@ ${dirs.join('')}
 <text x="${width - 34}" y="22" text-anchor="end" font-size="11" fill="currentColor" fill-opacity=".8">左右：向く方角　上下：見上げる高さ</text>
 </svg>`;
 }
+
+
+// 図4: 自分視点。出現の方角を正面にして立ち、腕を伸ばして拳を積んだときの見え方
+// 横 90°・縦 0〜60° の視野。ISS は出現位置に光り、最高点の方向へ点線で進む
+export function firstPersonSvg(p, width = 720, height = 420) {
+  const DIRS = ['北', '北北東', '北東', '東北東', '東', '東南東', '南東', '南南東', '南', '南南西', '南西', '西南西', '西', '西北西', '北西', '北北西'];
+  const dir16 = (az) => DIRS[Math.round((((az % 360) + 360) % 360) / 22.5) % 16];
+  const hhmm = (d) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(11, 16);
+  const centerAz = p.start.az;
+  const halfFov = 45, maxEl = 60;
+  const horizonY = height - 96;
+  const x = (az) => { let d = ((az - centerAz + 540) % 360) - 180; d = Math.max(-halfFov, Math.min(halfFov, d)); return width / 2 + (d / halfFov) * (width / 2 - 24); };
+  const y = (el) => horizonY - (Math.min(el, maxEl) / maxEl) * (horizonY - 28);
+  // 方位の目盛り（15°ごと）
+  let ticks = '';
+  for (let d = -45; d <= 45; d += 15) {
+    const az = (centerAz + d + 360) % 360;
+    ticks += `<line x1="${x(az).toFixed(1)}" y1="${horizonY}" x2="${x(az).toFixed(1)}" y2="${horizonY + 8}" stroke="currentColor" stroke-opacity=".8"/><text x="${x(az).toFixed(1)}" y="${horizonY + 24}" text-anchor="middle" font-size="12" fill="currentColor" fill-opacity="${d === 0 ? 1 : .7}" font-weight="${d === 0 ? 700 : 400}">${dir16(az)}</text>`;
+  }
+  // 地面と、遠くのシルエット（木・建物）
+  let sky = '';
+  let sx = 0, seed = 11;
+  while (sx < width) { seed = (seed * 9301 + 49297) % 233280; const w = 18 + (seed % 40), h = 8 + (seed % 26); const tree = seed % 3 === 0; sky += tree ? `<ellipse cx="${sx + w / 2}" cy="${horizonY - h / 2}" rx="${w / 2}" ry="${h / 2 + 4}" fill="#0b1020"/>` : `<rect x="${sx}" y="${horizonY - h}" width="${w}" height="${h}" fill="#0b1020"/>`; sx += w + 6; }
+  // 拳の積み重ね（10°ごと）: 手前中央に腕、出現の高さまで拳を積む
+  const fists = Math.max(1, Math.round(p.start.el / 10));
+  const fistW = 44, fistH = (y(0) - y(10));
+  const armX = width / 2;
+  let hand = `<path d="M${armX - 26},${height} L${armX - 18},${horizonY + 10} L${armX + 18},${horizonY + 10} L${armX + 26},${height} Z" fill="#1a2440" stroke="#3c5a8a" stroke-width="1.5"/>`;
+  for (let i = 0; i < fists; i++) {
+    const top = y((i + 1) * 10), bottom = y(i * 10);
+    hand += `<rect x="${armX - fistW / 2}" y="${top + 2}" width="${fistW}" height="${Math.max(6, bottom - top - 4)}" rx="9" fill="#243055" stroke="#5f7bb0" stroke-width="1.5" fill-opacity=".92"/>`
+      + `<line x1="${armX - fistW / 2 + 8}" y1="${(top + 10).toFixed(1)}" x2="${armX + fistW / 2 - 8}" y2="${(top + 10).toFixed(1)}" stroke="#5f7bb0" stroke-opacity=".7"/>`
+      + `<text x="${armX + fistW / 2 + 8}" y="${((top + bottom) / 2 + 4).toFixed(1)}" font-size="12" fill="currentColor" fill-opacity=".85">拳${i + 1}つ＝${(i + 1) * 10}°</text>`;
+  }
+  void fistH;
+  // ISS の出現点と、進む先（最高点の方向）
+  const sxp = x(p.start.az), syp = y(p.start.el);
+  const peakIn = Math.abs(((p.peak.az - centerAz + 540) % 360) - 180) <= halfFov && p.peak.el <= maxEl;
+  const tx = peakIn ? x(p.peak.az) : (((p.peak.az - centerAz + 540) % 360) - 180 > 0 ? width - 30 : 30);
+  const ty = peakIn ? y(p.peak.el) : 78;
+  const path = `M${sxp.toFixed(1)},${syp.toFixed(1)} Q${((sxp + tx) / 2).toFixed(1)},${(Math.min(syp, ty) - 30).toFixed(1)} ${tx.toFixed(1)},${ty.toFixed(1)}`;
+  const peakLabel = peakIn ? `最高 ${hhmm(p.peak.d)}・${p.peak.el.toFixed(0)}°` : `${dir16(p.peak.az)}の${p.peak.el >= 60 ? 'ほぼ頭上' : '高い空'}へ上がっていく（${p.peak.el.toFixed(0)}°）`;
+  return `<svg viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="自分の目から見た空の見え方">
+<defs><radialGradient id="fpGlow"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#ffe9a8" stop-opacity=".9"/><stop offset="1" stop-color="#ffd166" stop-opacity="0"/></radialGradient>
+<linearGradient id="fpSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1a4a"/><stop offset="1" stop-color="#2a3d6e"/></linearGradient></defs>
+<rect x="0" y="0" width="${width}" height="${horizonY}" fill="url(#fpSky)" rx="8"/>
+<rect x="0" y="${horizonY}" width="${width}" height="${height - horizonY}" fill="#182233" rx="8"/>
+<g fill="#fff" opacity=".7"><circle cx="80" cy="60" r="1.3"/><circle cx="200" cy="110" r="1"/><circle cx="330" cy="50" r="1.4"/><circle cx="500" cy="90" r="1.1"/><circle cx="640" cy="40" r="1.3"/><circle cx="420" cy="150" r="1"/><circle cx="120" cy="170" r="1.1"/><circle cx="600" cy="140" r="1"/></g>
+${sky}
+<line x1="0" x2="${width}" y1="${horizonY}" y2="${horizonY}" stroke="currentColor" stroke-width="1.5"/>
+${ticks}
+<text x="16" y="42" font-size="13" fill="currentColor" font-weight="700">正面を ${dir16(p.start.az)} に向けて立ち、腕をまっすぐ伸ばして拳を積む</text>
+<path d="${path}" fill="none" stroke="#ffd166" stroke-width="3" stroke-dasharray="7 7" opacity=".9"/>
+<text x="${(peakIn ? tx : (tx > width / 2 ? tx - 12 : tx + 12)).toFixed(1)}" y="${(peakIn ? ty - 12 : ty + 22).toFixed(1)}" text-anchor="${peakIn ? 'middle' : (tx > width / 2 ? 'end' : 'start')}" font-size="12" fill="#ffd166">${peakLabel}</text>
+${hand}
+<circle cx="${sxp.toFixed(1)}" cy="${syp.toFixed(1)}" r="26" fill="url(#fpGlow)"/>
+<circle cx="${sxp.toFixed(1)}" cy="${syp.toFixed(1)}" r="5" fill="#fff"/>
+<text x="${sxp.toFixed(1)}" y="${(syp - 34).toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="#ffd166">ここに現れる ${hhmm(p.start.d)}</text>
+<text x="${sxp.toFixed(1)}" y="${(syp - 18).toFixed(1)}" text-anchor="middle" font-size="12" fill="currentColor">${dir16(p.start.az)}・拳${fists}つ分（${p.start.el.toFixed(0)}°）</text>
+<text x="16" y="22" font-size="12" fill="currentColor" fill-opacity=".85">あなたの目から見た空（横 90°）。明るい星のような光が、点滅せず、すべるように動く</text>
+</svg>`;
+}

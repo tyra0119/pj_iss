@@ -1,14 +1,14 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=c732feb-1156';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=c732feb-1156';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=c732feb-1156';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=c732feb-1156';
-import { loadTransit } from './lib/transit.mjs?v=c732feb-1156';
-import { packingList } from './lib/packing.mjs?v=c732feb-1156';
-import { randomTrivia } from './lib/trivia.mjs?v=c732feb-1156';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs?v=c732feb-1156';
-import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=c732feb-1156';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=c732feb-1156';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=c732feb-1156';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=64f8597-1312';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=64f8597-1312';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=64f8597-1312';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=64f8597-1312';
+import { loadTransit } from './lib/transit.mjs?v=64f8597-1312';
+import { packingList } from './lib/packing.mjs?v=64f8597-1312';
+import { randomTrivia } from './lib/trivia.mjs?v=64f8597-1312';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg } from './illustrations.mjs?v=64f8597-1312';
+import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=64f8597-1312';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=64f8597-1312';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=64f8597-1312';
 
 const DAYS = 60;
 const TZ = 9;
@@ -85,7 +85,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=c732feb-1156');
+  const res = await fetch('./data/iss.tle?v=64f8597-1312');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -221,6 +221,7 @@ async function selectPass(r, kind = 'evening') {
   state.passKind = kind;
   $('#describe').innerHTML = describePass(r).map((t) => `<p>${t}</p>`).join('');
   $('#scene').innerHTML = observationSceneSvg(r);
+  $('#firstPerson').innerHTML = firstPersonSvg(r);
   $('#howto').innerHTML = HOW_TO_FIND.map((t) => `<li>${t}</li>`).join('');
   $('#howCard').hidden = false;
   $('#sitesCard').hidden = false;
@@ -918,8 +919,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=c732feb-1156').then((r) => r.json()),
-    fetch('./data/stations.json?v=c732feb-1156').then((r) => r.json()),
+    fetch('./data/sites.json?v=64f8597-1312').then((r) => r.json()),
+    fetch('./data/stations.json?v=64f8597-1312').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
