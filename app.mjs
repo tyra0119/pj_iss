@@ -1,14 +1,14 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=9b5dbaa-1345';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=9b5dbaa-1345';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=9b5dbaa-1345';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=9b5dbaa-1345';
-import { loadTransit } from './lib/transit.mjs?v=9b5dbaa-1345';
-import { packingList } from './lib/packing.mjs?v=9b5dbaa-1345';
-import { randomTrivia } from './lib/trivia.mjs?v=9b5dbaa-1345';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=9b5dbaa-1345';
-import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=9b5dbaa-1345';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=9b5dbaa-1345';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=9b5dbaa-1345';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=1a641d8-2045';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=1a641d8-2045';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=1a641d8-2045';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=1a641d8-2045';
+import { loadTransit } from './lib/transit.mjs?v=1a641d8-2045';
+import { packingList } from './lib/packing.mjs?v=1a641d8-2045';
+import { randomTrivia } from './lib/trivia.mjs?v=1a641d8-2045';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=1a641d8-2045';
+import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=1a641d8-2045';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=1a641d8-2045';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=1a641d8-2045';
 
 const DAYS = 60;
 const TZ = 9;
@@ -85,7 +85,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=9b5dbaa-1345');
+  const res = await fetch('./data/iss.tle?v=1a641d8-2045');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -303,7 +303,7 @@ async function selectPass(r, kind = 'evening') {
       const okCount = entries.filter((e) => e.w.available && e.w.observable).length;
       $('#sitesNote').textContent = okCount
         ? `観測時刻（${hhmm(r.peak.d)}）の予報で、低い雲と中間の雲の合計が20%以下の場所を「晴れ」としています。${okCount}か所が晴れの見込みです。`
-        : '観測時刻の予報では、どの候補地も雲が多い見込みです。前日と当日にもう一度調べてください。';
+        : (entries.some((e) => e.w.available && e.w.unstable) ? '観測時刻の予報では、雲が少ない候補地はありますが、いずれも前後に雨の心配があります（「雨の心配」の印）。前日と当日にもう一度調べてください。' : '観測時刻の予報では、どの候補地も雲が多い見込みです。前日と当日にもう一度調べてください。');
     } catch (err) {
       $('#sitesNote').textContent = `天気を取得できませんでした（${err.message}）。雲を見ずに候補地を並べています。`;
       entries = state.sites.map((s) => ({ site: s, w: { available: false }, pass: sitePass(s, r) }));
@@ -318,9 +318,10 @@ async function selectPass(r, kind = 'evening') {
   const score = (e) => {
     if (!e.pass) return 1e9;
     let s = 0;
-    if (withWeather && e.w.available) s += (e.w.observable ? 0 : 1000) + e.w.obs.cloudLowMid * 3;
+    if (withWeather && e.w.available) s += (e.w.observable ? 0 : e.w.unstable ? 400 : 1000) + e.w.obs.cloudLowMid * 3;
     else s += 500;
     s += e.travel ? e.travel.totalMin : e.site.walkMin;
+    if (e.travel && e.travel.totalMin > 90) s += (e.travel.totalMin - 90) * 2; // 片道 90 分を超える分は重く見る
     if (isFav(e.site.id)) s -= 60; // お気に入りは同じ天気なら優先
     if (e.site.roadNearby) s += 15; // 幹線道路のそば（明るい・車が多い）は少し下げる
     return s;
@@ -467,7 +468,7 @@ function renderSites(entries, withWeather) {
     const cloud = e.w.available ? `${e.w.obs.cloudLowMid}%` : '予報なし';
     const obsBadge = !e.pass ? '<span class="badge ng">条件外</span>'
       : !e.w.available ? '<span class="badge">天気未定</span>'
-        : e.w.observable ? '<span class="badge ok">晴れ</span>' : '<span class="badge ng">雲</span>';
+        : e.w.observable ? '<span class="badge ok">晴れ</span>' : e.w.unstable ? `<span class="badge warn">雨の心配 ${e.w.obsPrecipProb}%</span>` : '<span class="badge ng">雲</span>';
     const warns = warnsOf(e);
     const travel = e.travel ? `${state.from ? esc(state.from.name) + 'から' : ''}約${e.travel.totalMin}分${e.travel.source === 'estimate' ? '<span class="muted">（概算）</span>' : ''}` : '';
     const access = (e.site.nightAccess === '不明' ? '<div class="line warn">夜間に入れるか公式の記載が見つかっていません</div>' : e.site.nightAccess === '常時開園' ? '<div class="line">常時開園（公式サイトで確認）</div>' : '')
@@ -497,7 +498,7 @@ async function renderRecommendation(entries, withWeather) {
   let cloudyNote = '';
   let pickFrom = good;
   if (!best) {
-    cloudyNote = `<p class="headline ng">この日はどの候補地も雲が多い見込みです</p><p class="small">予報は変わります。前日と当日の夕方にもう一度調べてください。それでも雲なら、無理に出かけないのが正解です。下は、雲が晴れた場合に向けた<strong>おすすめ</strong>の計画です（雲が少ない順・近い順）。</p>`;
+    cloudyNote = `<p class="headline ng">この日は晴れの見込みの候補地がありません</p><p class="small">予報は変わります。前日と当日の夕方にもう一度調べてください。それでも雲なら、無理に出かけないのが正解です。下は、雲が晴れた場合に向けた<strong>おすすめ</strong>の計画です（雲が少ない順・近い順）。</p>`;
     pickFrom = entries.filter((e) => e.pass);
   }
   const pick = best ?? pickFrom[0];
@@ -638,7 +639,8 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
   const m = PLAN_MARGINS;
 
   const reason = [];
-  if (withWeather && best.w.available) reason.push(best.w.observable ? `観測時刻の雲が${best.w.obs.cloudLowMid}%と少ない` : `観測時刻の雲は${best.w.obs.cloudLowMid}%で多い`);
+  if (withWeather && best.w.available) reason.push(best.w.observable ? `観測時刻の雲が${best.w.obs.cloudLowMid}%と少ない` : best.w.unstable ? `観測時刻の雲は${best.w.obs.cloudLowMid}%と少ないが、前後の降水確率が${best.w.obsPrecipProb}%で雨の心配がある` : `観測時刻の雲は${best.w.obs.cloudLowMid}%で多い`);
+  if (tv && tv.totalMin > 90) reason.push(`片道約${tv.totalMin}分と遠い（数分の観測に往復${Math.round(tv.totalMin * 2 / 60 * 10) / 10}時間）`);
   if (tv) reason.push(`${esc(state.from.name)}から約${tv.totalMin}分`);
   reason.push(`${esc(best.site.station)}駅から徒歩${best.site.walkMin}分`);
   const warns = warnsOf(best);
@@ -946,7 +948,7 @@ async function renderProposals() {
         const b = clear[0];
         where = `<div class="where"><span class="acc">${isFav(b.s.id) ? '★お気に入り' : 'おすすめ'}</span> ${esc(b.s.name)}<span class="meta">（雲${b.w.obs.cloudLowMid}%${b.travel ? `・${esc(state.from.name)}から約${b.travel.totalMin}分` : `・${esc(b.s.station)}駅 徒歩${b.s.walkMin}分`}）。ほか${clear.length - 1}か所が晴れの見込み</span></div>`;
       } else {
-        where = '<div class="where ng">どの候補地も雲が多い見込み。近づいたら変わるかもしれません</div>';
+        where = '<div class="where ng">晴れの見込みの場所がありません（雲が多いか、雨の心配）。近づいたら変わるかもしれません</div>';
         cls = 'dim';
       }
     } else {
@@ -979,8 +981,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=9b5dbaa-1345').then((r) => r.json()),
-    fetch('./data/stations.json?v=9b5dbaa-1345').then((r) => r.json()),
+    fetch('./data/sites.json?v=1a641d8-2045').then((r) => r.json()),
+    fetch('./data/stations.json?v=1a641d8-2045').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
