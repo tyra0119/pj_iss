@@ -1,5 +1,5 @@
 // 現地でどっちを向くか: 地図に矢印（センサー不要）＋ スマホのコンパス（DeviceOrientation）
-import { dir16 } from './lib/describe.mjs?v=750951a-1134';
+import { dir16 } from './lib/describe.mjs?v=b9d267d-1137';
 
 const ACC = '#ffd166';
 
@@ -31,7 +31,64 @@ function destination(lat, lon, bearingDeg, meters) {
   return [p2 * 180 / Math.PI, l2 * 180 / Math.PI];
 }
 
-let map = null, layer = null;
+let map = null, layer = null, meLayer = null, watchId = null;
+
+// 地図の右上に「全画面」「現在地」のボタンを置く
+function addMapButtons(L, el) {
+  const Ctl = L.Control.extend({
+    onAdd() {
+      const box = L.DomUtil.create('div', 'leaflet-bar map-btns');
+      const full = L.DomUtil.create('a', 'map-btn', box);
+      full.href = '#'; full.title = '全画面で見る'; full.setAttribute('role', 'button'); full.textContent = '⤢';
+      const me = L.DomUtil.create('a', 'map-btn', box);
+      me.href = '#'; me.title = '現在地を表示'; me.setAttribute('role', 'button'); me.textContent = '◎';
+      L.DomEvent.disableClickPropagation(box);
+      L.DomEvent.on(full, 'click', (e) => { L.DomEvent.preventDefault(e); toggleFullscreen(el, full); });
+      L.DomEvent.on(me, 'click', (e) => { L.DomEvent.preventDefault(e); locateMe(L, me); });
+      return box;
+    },
+  });
+  map.addControl(new Ctl({ position: 'topright' }));
+}
+
+function toggleFullscreen(el, btn) {
+  const on = !el.classList.contains('full');
+  el.classList.toggle('full', on);
+  document.body.classList.toggle('map-fullscreen', on);
+  if (btn) { btn.textContent = on ? '✕' : '⤢'; btn.title = on ? '全画面をやめる' : '全画面で見る'; }
+  setTimeout(() => map.invalidateSize(), 60);
+  if (on) {
+    const onKey = (e) => { if (e.key === 'Escape') { toggleFullscreen(el, btn); window.removeEventListener('keydown', onKey); } };
+    window.addEventListener('keydown', onKey);
+  }
+}
+
+function locateMe(L, btn) {
+  if (!navigator.geolocation) { alert('この端末では位置情報が使えません'); return; }
+  if (btn) btn.classList.add('busy');
+  const show = (pos) => {
+    const { latitude: lat, longitude: lon, accuracy } = pos.coords;
+    if (!meLayer) meLayer = L.layerGroup().addTo(map);
+    meLayer.clearLayers();
+    L.circle([lat, lon], { radius: Math.min(accuracy || 30, 300), color: '#7ce38b', weight: 1, fillColor: '#7ce38b', fillOpacity: 0.15 }).addTo(meLayer);
+    L.circleMarker([lat, lon], { radius: 8, color: '#fff', weight: 2, fillColor: '#7ce38b', fillOpacity: 1 }).addTo(meLayer).bindTooltip('現在地', { permanent: true, direction: 'top', className: 'tip-me' });
+    if (btn) btn.classList.remove('busy');
+  };
+  navigator.geolocation.getCurrentPosition((pos) => {
+    show(pos);
+    // 観測地点と現在地の両方が入るように
+    const b = L.latLngBounds([[pos.coords.latitude, pos.coords.longitude]]);
+    layer?.eachLayer((l) => { if (l.getLatLng) b.extend(l.getLatLng()); });
+    map.fitBounds(b.pad(0.25), { maxZoom: 17 });
+    // しばらく追従する（3 分）
+    if (watchId != null) navigator.geolocation.clearWatch(watchId);
+    watchId = navigator.geolocation.watchPosition(show, () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
+    setTimeout(() => { if (watchId != null) { navigator.geolocation.clearWatch(watchId); watchId = null; } }, 3 * 60e3);
+  }, (err) => {
+    if (btn) btn.classList.remove('busy');
+    alert(err.code === 1 ? '位置情報の利用が許可されていません。ブラウザの設定で許可してください。' : '現在地を取得できませんでした');
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+}
 
 /**
  * 観測地点の地図を描き、出現・最高・消失の方角に矢印を出す
@@ -44,6 +101,7 @@ export async function showSiteMap(containerId, site, pass) {
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
+    addMapButtons(L, el);
   }
   if (layer) layer.remove();
   layer = L.layerGroup().addTo(map);
