@@ -1,13 +1,13 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=9fceb7f-1004';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=9fceb7f-1004';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=9fceb7f-1004';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=9fceb7f-1004';
-import { loadTransit } from './lib/transit.mjs?v=9fceb7f-1004';
-import { packingList } from './lib/packing.mjs?v=9fceb7f-1004';
-import { randomTrivia } from './lib/trivia.mjs?v=9fceb7f-1004';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs?v=9fceb7f-1004';
-import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=9fceb7f-1004';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=9fceb7f-1004';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=91badc3-1027';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=91badc3-1027';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=91badc3-1027';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=91badc3-1027';
+import { loadTransit } from './lib/transit.mjs?v=91badc3-1027';
+import { packingList } from './lib/packing.mjs?v=91badc3-1027';
+import { randomTrivia } from './lib/trivia.mjs?v=91badc3-1027';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs?v=91badc3-1027';
+import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=91badc3-1027';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=91badc3-1027';
 
 const DAYS = 60;
 const TZ = 9;
@@ -74,7 +74,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=9fceb7f-1004');
+  const res = await fetch('./data/iss.tle?v=91badc3-1027');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -842,8 +842,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=9fceb7f-1004').then((r) => r.json()),
-    fetch('./data/stations.json?v=9fceb7f-1004').then((r) => r.json()),
+    fetch('./data/sites.json?v=91badc3-1027').then((r) => r.json()),
+    fetch('./data/stations.json?v=91badc3-1027').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);

@@ -1,7 +1,7 @@
 // ODPT の列車運行情報。アクセストークンはビルド時に .env から config.mjs に埋め込む（scripts/build-pages.sh）
 // 公開 API（東京メトロ・都営・りんかい線・多摩モノレール・横浜市営など）とチャレンジ API（JR東日本・東急・京急・京王・西武・東武など）で
 // 提供事業者が違うので、両方を使う
-import { ODPT_TOKENS } from './config.mjs?v=9fceb7f-1004';
+import { ODPT_TOKENS } from './config.mjs?v=91badc3-1027';
 
 const ENDPOINTS = [
   { base: 'https://api.odpt.org/api/v4', label: '公開API', token: ODPT_TOKENS.public || '' },
