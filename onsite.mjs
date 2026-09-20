@@ -1,5 +1,5 @@
 // 現地でどっちを向くか: 地図に矢印（センサー不要）＋ スマホのコンパス（DeviceOrientation）
-import { dir16 } from './lib/describe.mjs?v=64f8597-1312';
+import { dir16 } from './lib/describe.mjs?v=f9463a6-1315';
 
 const ACC = '#ffd166';
 
@@ -123,9 +123,9 @@ export async function showSiteMap(containerId, site, pass) {
   };
   arrow(pass.start.az, 420, ACC, `① 出現 ${hhmm(pass.start.d)}<br>${dir16(pass.start.az)}・高さ${pass.start.el.toFixed(0)}°`, 6);
   arrow(pass.peak.az, 330, '#ff9f43', `② 最高 ${hhmm(pass.peak.d)}<br>${dir16(pass.peak.az)}・高さ${pass.peak.el.toFixed(0)}°`, 5);
-  if (Math.abs(((pass.end.az - pass.peak.az + 540) % 360) - 180) > 12) {
-    arrow(pass.end.az, 260, '#9aa4bf', `③ 消失 ${hhmm(pass.end.d)}<br>${dir16(pass.end.az)}`, 4);
-  }
+  // ③ は常に描く。②とほぼ同じ方角なら短い矢印にして、ラベルが重ならないようにする
+  const near = Math.abs(((pass.end.az - pass.peak.az + 540) % 360) - 180) <= 12;
+  arrow(pass.end.az, near ? 190 : 260, '#9aa4bf', `③ 消失 ${hhmm(pass.end.d)}<br>${dir16(pass.end.az)}${near ? '（②とほぼ同じ方角）' : `・高さ${pass.end.el.toFixed(0)}°`}`, 4);
   // 北向きの目印
   const n = destination(site.lat, site.lon, 0, 150);
   L.marker(n, { icon: L.divIcon({ className: 'arrow-label north', html: '<span>北</span>', iconSize: null }) }).addTo(layer);
