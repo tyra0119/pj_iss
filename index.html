@@ -71,6 +71,11 @@
   .legs li{margin:3px 0;white-space:normal}
   .packing{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
   .packing summary{color:var(--fg);font-weight:700}
+  button.star{background:none;border:0;padding:0 4px;font-size:1.1rem;color:var(--muted);cursor:pointer}
+  button.star[aria-pressed=true]{color:var(--accent)}
+  #originList{list-style:none;padding:0;margin:8px 0 0}
+  #originList li{display:flex;gap:8px;align-items:center;margin:4px 0}
+  .train{margin:4px 0}
 </style>
 </head>
 <body>
@@ -92,6 +97,17 @@
         <label>どこから行きますか <select name="from"><option value="">（選んでください）</option><option value="geo">現在地</option></select></label>
       </form>
       <p class="muted small">出発駅を選ぶと、提案に所要時間が付き、計画に乗る電車と出発時刻が出ます。</p>
+      <details id="originReg">
+        <summary>いつも使う駅を登録する</summary>
+        <form id="originForm" style="margin-top:8px">
+          <label>駅名 <input name="q" list="stationNames" placeholder="例: 三鷹" autocomplete="off" style="width:10em"></label>
+          <datalist id="stationNames"></datalist>
+          <button type="submit">登録</button>
+          <span id="originMsg" class="muted small"></span>
+        </form>
+        <ul id="originList" class="small"></ul>
+        <p class="muted small">登録した駅は上の一覧の先頭に出ます。この端末のブラウザにだけ保存されます。</p>
+      </details>
     </div>
 
     <div class="card">
@@ -128,7 +144,7 @@
       <h2>観測場所を選んでください</h2>
       <p id="sitesNote" class="muted small"></p>
       <div class="scroll"><table id="sites"><thead><tr><th>順位</th><th>場所</th><th>最寄駅</th><th class="num">所要の目安</th><th class="num">雲（低い雲＋中間の雲）</th><th>観測</th><th class="wrap">移動の注意</th><th></th></tr></thead><tbody></tbody></table></div>
-      <p class="muted small">所要時間は ODPT の路線・駅・時刻表データから計算した鉄道経路（徒歩と乗換の待ちを含む）です。* が付いたものは駅データに無いため距離からの概算です。上ほどおすすめです。</p>
+      <p class="muted small">所要時間は ODPT の路線・駅・時刻表データから計算した鉄道経路（徒歩と乗換の待ちを含む）です。* が付いたものは駅データに無いため距離からの概算です。上ほどおすすめです。☆ を押すとお気に入りになり、晴れていれば優先して提案します。</p>
     </div>
   </section>
 

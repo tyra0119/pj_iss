@@ -106,15 +106,22 @@ function compassSvg(headingDeg, pass, now) {
 </svg>`;
 }
 
+const WD = ['日', '月', '火', '水', '木', '金', '土'];
+// 日時の表示（JST）: 9/29(火) 18:19:30
+function whenText(d) {
+  const j = new Date(d.getTime() + 9 * 3600e3);
+  return `${j.getUTCMonth() + 1}/${j.getUTCDate()}(${WD[j.getUTCDay()]}) ${String(j.getUTCHours()).padStart(2, '0')}:${String(j.getUTCMinutes()).padStart(2, '0')}:${String(j.getUTCSeconds()).padStart(2, '0')}`;
+}
 function countdownText(pass, now) {
   const fmt = (ms) => {
     const s = Math.max(0, Math.round(ms / 1000));
-    return `${Math.floor(s / 60)}分${String(s % 60).padStart(2, '0')}秒`;
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return `${h ? `${h}時間` : ''}${m}分${String(sec).padStart(2, '0')}秒`;
   };
-  if (now < pass.start.d) return `出現まで あと ${fmt(pass.start.d - now)}`;
-  if (now < pass.peak.d) return `見えています。最高点まで あと ${fmt(pass.peak.d - now)}`;
-  if (now < pass.end.d) return `見えています。消えるまで あと ${fmt(pass.end.d - now)}`;
-  return 'この通過は終わりました';
+  if (now < pass.start.d) return `出現 ${whenText(pass.start.d)} まで あと ${fmt(pass.start.d - now)}`;
+  if (now < pass.peak.d) return `見えています。最高点 ${whenText(pass.peak.d)} まで あと ${fmt(pass.peak.d - now)}`;
+  if (now < pass.end.d) return `見えています。消える ${whenText(pass.end.d)} まで あと ${fmt(pass.end.d - now)}`;
+  return `この通過は ${whenText(pass.end.d)} に終わりました`;
 }
 
 /**

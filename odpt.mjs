@@ -94,6 +94,32 @@ export function classify(text, status) {
 
 let cache = { at: 0, data: null };
 
+// 駅時刻表（ある駅・路線の全列車の発車時刻）。事業者によって公開API/チャレンジAPIが違うので両方試す
+const sttCache = new Map();
+export async function fetchStationTimetable(stationId, railwayId) {
+  const key = `${stationId}|${railwayId}`;
+  if (sttCache.has(key)) return sttCache.get(key);
+  let result = [];
+  for (const ep of ENDPOINTS) {
+    if (!ep.token) continue;
+    try {
+      const res = await fetch(`${ep.base}/odpt:StationTimetable?acl:consumerKey=${encodeURIComponent(ep.token)}&odpt:station=${encodeURIComponent(stationId)}&odpt:railway=${encodeURIComponent(railwayId)}`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data.length) { result = data; break; }
+    } catch { /* try next */ }
+  }
+  sttCache.set(key, result);
+  return result;
+}
+
+const TRAIN_TYPE_JA = { Local: '各駅停車', Rapid: '快速', CommuterRapid: '通勤快速', SpecialRapid: '特別快速', Express: '急行', SemiExpress: '準急', LimitedExpress: '特急', CommuterExpress: '通勤急行', RapidExpress: '快速急行', CommuterLimitedExpress: '通勤特急', SectionSemiExpress: '区間準急', SectionExpress: '区間急行' };
+export function trainTypeJa(id) {
+  if (!id) return '';
+  const tail = String(id).split('.').pop();
+  return TRAIN_TYPE_JA[tail] ?? tail;
+}
+
 /**
  * 全事業者の運行情報を取得（60秒キャッシュ）。トークンが無ければ null
  */
