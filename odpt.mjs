@@ -1,7 +1,7 @@
 // ODPT の列車運行情報。アクセストークンはビルド時に .env から config.mjs に埋め込む（scripts/build-pages.sh）
 // 公開 API（東京メトロ・都営・りんかい線・多摩モノレール・横浜市営など）とチャレンジ API（JR東日本・東急・京急・京王・西武・東武など）で
 // 提供事業者が違うので、両方を使う
-import { ODPT_TOKENS } from './config.mjs?v=e9adfac-0938';
+import { ODPT_TOKENS } from './config.mjs?v=9fceb7f-1004';
 
 const ENDPOINTS = [
   { base: 'https://api.odpt.org/api/v4', label: '公開API', token: ODPT_TOKENS.public || '' },
@@ -110,6 +110,25 @@ export async function fetchStationTimetable(stationId, railwayId) {
     } catch { /* try next */ }
   }
   sttCache.set(key, result);
+  return result;
+}
+
+// バス時刻表（路線パターン単位。1 件 = 1 便）
+const busTtCache = new Map();
+export async function fetchBusTimetable(patternId, calendarId) {
+  const key = `${patternId}|${calendarId ?? ''}`;
+  if (busTtCache.has(key)) return busTtCache.get(key);
+  let result = [];
+  for (const ep of ENDPOINTS) {
+    if (!ep.token) continue;
+    try {
+      const res = await fetch(`${ep.base}/odpt:BusTimetable?acl:consumerKey=${encodeURIComponent(ep.token)}&odpt:busroutePattern=${encodeURIComponent(patternId)}${calendarId ? `&odpt:calendar=${encodeURIComponent(calendarId)}` : ''}`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data.length) { result = data; break; }
+    } catch { /* try next */ }
+  }
+  busTtCache.set(key, result);
   return result;
 }
 
