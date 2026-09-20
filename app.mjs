@@ -1,13 +1,14 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=91badc3-1027';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=91badc3-1027';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=91badc3-1027';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=91badc3-1027';
-import { loadTransit } from './lib/transit.mjs?v=91badc3-1027';
-import { packingList } from './lib/packing.mjs?v=91badc3-1027';
-import { randomTrivia } from './lib/trivia.mjs?v=91badc3-1027';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs?v=91badc3-1027';
-import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=91badc3-1027';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=91badc3-1027';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=84eeecd-1040';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=84eeecd-1040';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=84eeecd-1040';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=84eeecd-1040';
+import { loadTransit } from './lib/transit.mjs?v=84eeecd-1040';
+import { packingList } from './lib/packing.mjs?v=84eeecd-1040';
+import { randomTrivia } from './lib/trivia.mjs?v=84eeecd-1040';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs?v=84eeecd-1040';
+import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=84eeecd-1040';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=84eeecd-1040';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=84eeecd-1040';
 
 const DAYS = 60;
 const TZ = 9;
@@ -74,7 +75,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=91badc3-1027');
+  const res = await fetch('./data/iss.tle?v=84eeecd-1040');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -350,6 +351,33 @@ function legsHtml(route, accessLabel, egressLabel) {
   if (egressLabel) items.push(`<li>${egressLabel}</li>`);
   return `<ol class="legs">${items.join('')}</ol>`;
 }
+/** タイムライン用: 区間の方面 */
+function legDirection(leg) {
+  if (leg.type !== 'rail') return '';
+  const term = terminalName(leg);
+  const next = nextStationName(leg);
+  return term ? `${next && next !== term ? `${next}・` : ''}${term}方面` : '';
+}
+/** 当日の運行状態を路線IDで引けるようにする（当日以外は null） */
+async function statusMapFor(routes) {
+  if (state.dateKey !== localDate(new Date()) || !hasAnyToken() || !state.transit) return null;
+  const ids = [...new Set(routes.flatMap((r) => (r ? r.legs.filter((l) => l.type === 'rail').map((l) => l.railway) : [])))];
+  if (!ids.length) return null;
+  try {
+    const st = await lineStatuses(ids.map((id) => ({ id, name: state.transit.railwayById.get(id)?.n ?? id })));
+    if (!st) return null;
+    const m = new Map();
+    st.forEach((s, i) => { if (s.supported) m.set(ids[i], { level: s.level, text: s.text }); });
+    return m;
+  } catch { return null; }
+}
+/** 行き・帰りのタイムラインを描く（startMin: 最初の乗り物に乗る時刻。null なら時刻なし） */
+function drawRoute(id, route, startMin, originLabel, destLabel, status) {
+  const el = $(`#${id}`);
+  if (!el || !route || !state.transit) return;
+  el.innerHTML = routeTimelineHtml({ transit: state.transit, route, startMin, originLabel, destLabel, status, direction: legDirection, waitRail: 4, waitBus: 12 });
+}
+
 /** 帰りの最終電車 / 行きの終電 / 帰りの始発（最初に乗る区間の駅・路線・方向で引く） */
 function firstLastFor(route, holiday) {
   const t = state.transit;
@@ -491,7 +519,10 @@ async function fillTrains(best, tv, holiday, arriveBy, leaveSite) {
         ? `<div class="train">${trainLine(tr)} に乗る。<span class="small">改札には ${fmtMin(tr.pick.min - 5)} までに。${tr.prev ? `ひとつ前は ${fmtMin(tr.prev.min)} 発` : ''}${tr.next ? `、次の ${fmtMin(tr.next.min)} 発では到着締切に間に合いません` : ''}。${tr.allTypesUsed ? '快速・急行は降りる駅に止まらないことがあります。乗る前に案内表示で確認してください。' : ''}</span></div>`
         : '<div class="muted small">この駅の時刻表を取得できなかったため、出発の目安だけ表示しています。</div>';
     }
-    if (tr) { const dep = $('#departBy'); if (dep) dep.textContent = `${fmtMin(tr.pick.min - 5)} まで`; }
+    if (tr) {
+      const dep = $('#departBy'); if (dep) dep.textContent = `${fmtMin(tr.pick.min - 5)} まで`;
+      if (state.routeCtx?.best === best) { state.routeCtx.goStart = tr.pick.min; drawRoute('goRoute', tv.go, tr.pick.min, state.routeCtx.fromLabel, best.site.name, state.routeCtx.status); }
+    }
   }
   if (backLeg) {
     const tr = await pickAny(backLeg, leaveSite + (tv.back?.accessFromMin ?? best.site.walkMin), 'earliestAfter', holiday);
@@ -508,6 +539,7 @@ async function fillTrains(best, tv, holiday, arriveBy, leaveSite) {
       const rb = Math.round(tr.pick.min + after);
       const el2 = $('#returnBy');
       if (el2) { el2.textContent = fmtMin(rb); const n = $('#returnNote'); if (n) n.textContent = `（${fmtMin(tr.pick.min)} 発の便に乗った場合）`; }
+      if (state.routeCtx?.best === best) { state.routeCtx.backStart = tr.pick.min; drawRoute('backRoute', tv.back, tr.pick.min, best.site.name, state.routeCtx.fromLabel, state.routeCtx.status); }
     }
   }
 }
@@ -556,13 +588,14 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
     const transfers = tv.go ? tv.go.legs.filter((l) => l.type === 'transfer').length : 0;
     const manyTransfers = transfers >= 2 ? '<p class="warn small">電車だと乗り換えが多い行き先です。バスの方が楽なことがあるので、下の Google マップ（バスを含む経路）も確かめてください。バスの時刻表はこのアプリではまだ扱えていません。</p>' : '';
     const startsAtOrigin = (r) => state.from.id !== 'geo' && state.transit.nodes[r.from].mode === 'rail' && state.transit.nodes[r.from].n === state.from.name;
-    const goLegs = tv.go ? legsHtml(tv.go,
+    void startsAtOrigin;
+    const goLegs = tv.go ? `<div id="goRoute"></div><details class="small"><summary>文章で見る</summary>${legsHtml(tv.go,
       startsAtOrigin(tv.go) ? `${esc(state.from.name)}駅の改札へ` : `${esc(state.from.name)}から${nodeLabel(tv.go.from)}へ歩く（約${Math.max(1, Math.round(tv.go.accessFromMin))}分）`,
-      `${nodeLabel(tv.go.to)}から徒歩約${Math.max(1, Math.round(tv.go.accessToMin))}分で <strong>${esc(best.site.name)}</strong>。${esc(best.site.landmark)}`) : '';
+      `${nodeLabel(tv.go.to)}から徒歩約${Math.max(1, Math.round(tv.go.accessToMin))}分で <strong>${esc(best.site.name)}</strong>。${esc(best.site.landmark)}`)}</details>` : '';
     const endsAtOrigin = (r) => state.from.id !== 'geo' && state.transit.nodes[r.to].mode === 'rail' && state.transit.nodes[r.to].n === state.from.name;
-    const backLegs = tv.back ? legsHtml(tv.back,
+    const backLegs = tv.back ? `<div id="backRoute"></div><details class="small"><summary>文章で見る</summary>${legsHtml(tv.back,
       `${esc(best.site.name)}から${nodeLabel(tv.back.from)}へ徒歩約${Math.max(1, Math.round(tv.back.accessFromMin))}分`,
-      endsAtOrigin(tv.back) ? `${esc(state.from.name)}駅に到着` : `${nodeLabel(tv.back.to)}から${esc(state.from.name)}へ歩く（約${Math.max(1, Math.round(tv.back.accessToMin))}分）`) : '';
+      endsAtOrigin(tv.back) ? `${esc(state.from.name)}駅に到着` : `${nodeLabel(tv.back.to)}から${esc(state.from.name)}へ歩く（約${Math.max(1, Math.round(tv.back.accessToMin))}分）`)}</details>` : '';
     if (!overnight) {
       const departBy = arriveBy - tv.totalMin;
       const returnBy = leaveSite + tv.backMin;
@@ -628,7 +661,16 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
     const tr = [...document.querySelectorAll('#sitesList .site-card')][state.entries.indexOf(e)];
     selectSite(e, tr);
   }));
-  if (tv && !overnight) fillTrains(best, tv, holiday, arriveBy, leaveSite).catch(console.error);
+  if (tv) {
+    const fromLabel = state.from.id === 'geo' ? '現在地' : `${state.from.name}駅`;
+    state.routeCtx = { best, tv, fromLabel, status: null };
+    const goStart = overnight ? null : (arriveBy - tv.totalMin) + Math.round(tv.go?.accessFromMin ?? 0);
+    const backStart = overnight ? null : leaveSite + Math.round(tv.back?.accessFromMin ?? 0);
+    drawRoute('goRoute', tv.go, goStart, fromLabel, best.site.name, null);
+    drawRoute('backRoute', tv.back, backStart, best.site.name, fromLabel, null);
+    statusMapFor([tv.go, tv.back]).then((m) => { if (m && state.routeCtx?.best === best) { state.routeCtx.status = m; drawRoute('goRoute', tv.go, state.routeCtx.goStart ?? goStart, fromLabel, best.site.name, m); drawRoute('backRoute', tv.back, state.routeCtx.backStart ?? backStart, best.site.name, fromLabel, m); } }).catch(console.error);
+    if (!overnight) fillTrains(best, tv, holiday, arriveBy, leaveSite).catch(console.error);
+  }
   return renderTrainInfo(best, good);
 }
 
@@ -833,6 +875,7 @@ async function renderProposals() {
 }
 
 async function init() {
+  const style = document.createElement('style'); style.textContent = ROUTE_VIEW_CSS; document.head.appendChild(style);
   $('#figElevation').innerHTML = elevationGuideSvg();
   $('#figTwilight').innerHTML = twilightSvg();
   const dateInput = $('#plan [name=date]');
@@ -842,8 +885,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=91badc3-1027').then((r) => r.json()),
-    fetch('./data/stations.json?v=91badc3-1027').then((r) => r.json()),
+    fetch('./data/sites.json?v=84eeecd-1040').then((r) => r.json()),
+    fetch('./data/stations.json?v=84eeecd-1040').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
