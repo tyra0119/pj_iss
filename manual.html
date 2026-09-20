@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>使い方 — そうだ。ISSを見に行こう！</title>
+<style>
+  :root{--bg:#0b1020;--fg:#e8ecf5;--muted:#8b94ad;--card:#141b33;--line:#243055;--accent:#ffd166;--ok:#7ce38b;--ng:#ff7b7b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.7}
+  main{max-width:820px;margin:0 auto;padding:20px 16px 64px}
+  h1{font-size:1.35rem;margin:0 0 4px}
+  h2{font-size:1.1rem;margin:0 0 10px;color:var(--accent)}
+  h3{font-size:1rem;margin:14px 0 4px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 16px}
+  .muted{color:var(--muted)}
+  a{color:var(--accent)}
+  ol,ul{padding-left:1.3em}
+  li{margin:4px 0}
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  th,td{padding:6px 4px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:500;white-space:nowrap}
+  .btn{display:inline-block;background:var(--accent);color:#1a1400;font-weight:700;border-radius:8px;padding:8px 14px;text-decoration:none}
+</style>
+</head>
+<body>
+<main>
+  <h1>使い方 — そうだ。ISSを見に行こう！</h1>
+  <p class="muted">国際宇宙ステーション（ISS）が肉眼ではっきり見える夜に、電車とバスで「見える場所」へ行き、帰ってくるまでを計画するアプリです。首都圏（1都3県）が対象です。</p>
+  <p><a class="btn" href="./">アプリを開く</a></p>
+
+  <div class="card">
+    <h2>全体の流れ</h2>
+    <ol>
+      <li><strong>① 日と出発駅</strong>: 出発駅を選び、「見える日の提案」から日を押す（または日付を自分で選ぶ）。</li>
+      <li><strong>② 観測場所</strong>: 候補地の一覧から場所を選ぶ。「おすすめの場所で計画を見る」でも進める。</li>
+      <li><strong>③ 計画</strong>: 出発時刻、乗る電車・バス、到着、観測、帰りの終電、帰宅の時刻。現地の地図とコンパス、見方の説明、持ち物。</li>
+    </ol>
+    <p class="muted">上の手順ボタンで戻れます。日を選び直すと③は作り直しになります。</p>
+  </div>
+
+  <div class="card">
+    <h2>① 日と出発駅</h2>
+    <h3>出発駅</h3>
+    <ul>
+      <li>「どこから行きますか」で主要駅を選ぶか、「いつも使う駅を登録する」で駅名を打って候補から登録します（漢字・ひらがな・ローマ字）。</li>
+      <li>「現在地」を選ぶと、いまいる場所から近い駅・バス停を出発点にします。</li>
+    </ul>
+    <h3>見える日の提案</h3>
+    <ul>
+      <li>これから60日で夕方に見える日を並べます。見える日は2〜4日続けて来て、そのあと数週間は見えません。</li>
+      <li>16日以内の日は、天気予報からおすすめの場所（雲が少なく近い所）を添えます。それより先は近づいてから場所を提案します。</li>
+      <li>夜明け前（4〜5時台）に見える日は折りたたみの中にあります。前の晩に出かけて始発で帰る計画になります。</li>
+    </ul>
+    <h3>表示する通過の条件</h3>
+    <p>最大の高さ30°以上（腕を伸ばした拳3つ分以上）、明るさ−1等より明るい、太陽が地平線の8°より下。これを満たさない日は「見えません。次は◯日」と出ます。</p>
+  </div>
+
+  <div class="card">
+    <h2>② 観測場所</h2>
+    <ul>
+      <li>候補地は首都圏の公園・河川敷・海辺29か所。夜間に入れるかは公式サイトで確認したものに「常時開園」と表示しています。</li>
+      <li>並び順は、観測時刻の雲（低い雲＋中間の雲が20%以下を「晴れ」）、出発駅からの所要時間、大きな道路からの距離（暗さ）で決めます。</li>
+      <li>行き帰りの時間帯に雨や強風の予報なら「自転車は不向き」などの注意を出します。</li>
+      <li>☆を押すとお気に入りになり、晴れていれば優先して提案します。</li>
+      <li>カードを押すとその場所の計画に進みます。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>③ 計画</h2>
+    <table><tbody>
+      <tr><th>出発</th><td>「hh:mm 発の○○線（各駅停車）に乗る。改札には hh:mm までに」と、駅の時刻表から具体的な列車を出します。各駅停車がない路線では快速などになるので、降りる駅に止まるか案内表示で確かめてください。</td></tr>
+      <tr><th>経路</th><td>路線色のタイムラインで、駅・バス停ごとの発着時刻、乗り換えの徒歩、降りる駅を示します。バスは本数が少なく遅れやすいので、時刻を確かめて余裕を持ってください。</td></tr>
+      <tr><th>到着</th><td>見え始めの15分前を到着締切にしています。方角を合わせて待ちます。</td></tr>
+      <tr><th>観測</th><td>見え始めから見え終わりまで。2〜6分です。</td></tr>
+      <tr><th>帰り</th><td>現地を出る時刻、乗る便、最寄駅の最終電車（土日は土休日ダイヤ）、バスなら最終バス。</td></tr>
+      <tr><th>帰宅</th><td>出発駅に戻る時刻の目安。</td></tr>
+      <tr><th>運行情報</th><td>当日にこの画面を開くと、乗る路線の遅れ・運休を表示し、遅れていれば別路線で行ける次点を案内します。</td></tr>
+      <tr><th>持ち物</th><td>気温・雨・風・夜通しかどうかで変わります。</td></tr>
+    </tbody></table>
+    <p class="muted">Google マップの経路検索へのリンクもあります。祝日はまだ土休日ダイヤと判定していません。</p>
+  </div>
+
+  <div class="card">
+    <h2>現地で</h2>
+    <ul>
+      <li><strong>地図</strong>: 青い点に立ち、黄色①の矢印の先の空を見ます。橙②は最も高くなる方角、灰③は消える方角。⤢ で全画面、◎ で現在地を表示します。</li>
+      <li><strong>コンパス</strong>: 「スマホのコンパスで合わせる」を押し、スマホの上を①に向けて体ごと回します。上の三角が緑になれば合っています。出現までのカウントダウンと日時も出ます。方位センサーの値が取れない端末では地図で合わせてください。</li>
+      <li><strong>見つけ方</strong>: 点滅せず、音もなく、飛行機より速く動く白い光です。出現の2〜3分前から、出現方位のやや上を広く眺めて待ちます。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>データについて</h2>
+    <ul>
+      <li>鉄道・バス: 公共交通オープンデータセンター（路線・駅・時刻表・運行情報、バス停・バス路線・バス時刻表）。バスは都営・西武・東急・国際興業・横浜市営。</li>
+      <li>軌道: CelesTrak（ISS, NORAD 25544）。位置の計算は satellite.js、地球の影と明るさは自前計算。基準時刻から離れるほど予測時刻が数分ずれます。</li>
+      <li>天気: Open-Meteo。地図: OpenStreetMap。</li>
+      <li>所要時間の「概算」と表示されたものは駅データに無い区間を距離から見積もったものです。</li>
+    </ul>
+    <p class="muted">見るのは屋外の夜です。無理はせず、安全を優先してください。</p>
+  </div>
+</main>
+</body>
+</html>

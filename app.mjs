@@ -1,14 +1,14 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=b9d267d-1137';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=b9d267d-1137';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=b9d267d-1137';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=b9d267d-1137';
-import { loadTransit } from './lib/transit.mjs?v=b9d267d-1137';
-import { packingList } from './lib/packing.mjs?v=b9d267d-1137';
-import { randomTrivia } from './lib/trivia.mjs?v=b9d267d-1137';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs?v=b9d267d-1137';
-import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=b9d267d-1137';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=b9d267d-1137';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=b9d267d-1137';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=c732feb-1156';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=c732feb-1156';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=c732feb-1156';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=c732feb-1156';
+import { loadTransit } from './lib/transit.mjs?v=c732feb-1156';
+import { packingList } from './lib/packing.mjs?v=c732feb-1156';
+import { randomTrivia } from './lib/trivia.mjs?v=c732feb-1156';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs?v=c732feb-1156';
+import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=c732feb-1156';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=c732feb-1156';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=c732feb-1156';
 
 const DAYS = 60;
 const TZ = 9;
@@ -85,7 +85,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=b9d267d-1137');
+  const res = await fetch('./data/iss.tle?v=c732feb-1156');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -850,8 +850,17 @@ async function runPlan() {
 
 // ---------- ① 提案一覧 ----------
 let hourlyCache = null;
+// 紹介資料の撮影用: ?demo=clear で、天気を「晴れ・降水なし」の仮データにする（画面に「天気は再現」と出す）
+const DEMO = new URLSearchParams(location.search).get('demo');
+function demoHourly() {
+  const times = []; const base = new Date(); base.setMinutes(0, 0, 0);
+  for (let h = -24; h < 16 * 24; h++) { const d = new Date(base.getTime() + h * 3600e3 + 9 * 3600e3); times.push(d.toISOString().slice(0, 13) + ':00'); }
+  const n = times.length;
+  return state.sites.map((s, i) => ({ time: times, cloud_cover_low: times.map((_, k) => (i * 7 + k) % 5 === 0 ? 12 : 4), cloud_cover_mid: times.map(() => 3), cloud_cover_high: times.map(() => 20), precipitation_probability: times.map(() => 5), precipitation: times.map(() => 0), wind_speed_10m: times.map(() => 3), temperature_2m: times.map(() => 19) }));
+}
 async function hourlyAll() {
   if (hourlyCache && Date.now() - hourlyCache.at < 10 * 60e3) return hourlyCache.data;
+  if (DEMO === 'clear') { document.body.classList.add('demo'); $('#tleInfo').insertAdjacentHTML('afterbegin', '<div class="warn">天気は再現（撮影用の仮データ）。</div>'); const data = demoHourly(); hourlyCache = { at: Date.now(), data }; return data; }
   const data = await fetchHourly(state.sites);
   hourlyCache = { at: Date.now(), data };
   return data;
@@ -909,8 +918,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=b9d267d-1137').then((r) => r.json()),
-    fetch('./data/stations.json?v=b9d267d-1137').then((r) => r.json()),
+    fetch('./data/sites.json?v=c732feb-1156').then((r) => r.json()),
+    fetch('./data/stations.json?v=c732feb-1156').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
