@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="build" content="84eeecd-1040">
+<meta charset="utf-8"><meta name="build" content="fc59bb6-1057">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>そうだ。ISSを見に行こう！</title>
 <meta name="description" content="首都圏で ISS（国際宇宙ステーション）が肉眼ではっきり見える日と場所を提案し、電車での行き方と帰りの終電まで計画します。">
@@ -76,6 +76,20 @@
   #originList{list-style:none;padding:0;margin:8px 0 0}
   #originList li{display:flex;gap:8px;align-items:center;margin:4px 0}
   .train{margin:4px 0}
+  /* 処理中の表示 */
+  #busyBar{position:fixed;left:0;top:0;height:4px;width:100%;background:linear-gradient(90deg,transparent,var(--accent),transparent);background-size:40% 100%;animation:busy 1s linear infinite;z-index:50}
+  #busyBar[hidden]{display:none}
+  @keyframes busy{from{background-position:-40% 0}to{background-position:140% 0}}
+  .proposal.loading{border-color:var(--accent);opacity:.85}
+  .proposal.loading .when::after{content:"　計算中…";color:var(--accent);font-size:.9rem}
+  body.busy .proposal:not(.loading),body.busy .site-card{pointer-events:none;opacity:.6}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .suggest{display:grid;gap:4px;margin:6px 0 4px;max-width:28em}
+  .suggest button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:#0f1630;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .suggest button:hover,.suggest button:focus{border-color:var(--accent)}
+  .suggest .nm{font-weight:700}
+  .suggest .ln{color:var(--muted);font-size:.8rem;text-align:right}
   .sitelist{display:grid;gap:10px}
   .site-card{background:#0f1630;border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer}
   .site-card:hover{border-color:var(--accent)}
@@ -92,6 +106,7 @@
 </style>
 </head>
 <body>
+<div id="busyBar" hidden></div>
 <main>
   <h1>そうだ。ISSを見に行こう！</h1>
   <p class="sub">肉眼ではっきり見える日と場所を提案し、電車とバスでの行き方と帰りの終電まで計画します。<span id="status" class="small"></span></p>
@@ -113,11 +128,11 @@
       <details id="originReg">
         <summary>いつも使う駅を登録する</summary>
         <form id="originForm" style="margin-top:8px">
-          <label>駅名 <input name="q" list="stationNames" placeholder="例: 三鷹" autocomplete="off" style="width:10em"></label>
-          <datalist id="stationNames"></datalist>
+          <label>駅名 <input name="q" placeholder="例: 三鷹 / しんじゅく / Shibuya" autocomplete="off" style="width:14em"></label>
           <button type="submit">登録</button>
           <span id="originMsg" class="muted small"></span>
         </form>
+        <div id="originSuggest" class="suggest" hidden></div>
         <ul id="originList" class="small"></ul>
         <p class="muted small">登録した駅は上の一覧の先頭に出ます。この端末のブラウザにだけ保存されます。</p>
       </details>
@@ -233,6 +248,6 @@
     <div>ODPTチャレンジ2026向けに開発中。</div>
   </footer>
 </main>
-<script type="module" src="./app.mjs?v=84eeecd-1040"></script>
+<script type="module" src="./app.mjs?v=fc59bb6-1057"></script>
 </body>
 </html>

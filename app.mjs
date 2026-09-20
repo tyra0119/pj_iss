@@ -1,14 +1,14 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=84eeecd-1040';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=84eeecd-1040';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=84eeecd-1040';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=84eeecd-1040';
-import { loadTransit } from './lib/transit.mjs?v=84eeecd-1040';
-import { packingList } from './lib/packing.mjs?v=84eeecd-1040';
-import { randomTrivia } from './lib/trivia.mjs?v=84eeecd-1040';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs?v=84eeecd-1040';
-import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=84eeecd-1040';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=84eeecd-1040';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=84eeecd-1040';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=fc59bb6-1057';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=fc59bb6-1057';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=fc59bb6-1057';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=fc59bb6-1057';
+import { loadTransit } from './lib/transit.mjs?v=fc59bb6-1057';
+import { packingList } from './lib/packing.mjs?v=fc59bb6-1057';
+import { randomTrivia } from './lib/trivia.mjs?v=fc59bb6-1057';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg } from './illustrations.mjs?v=fc59bb6-1057';
+import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=fc59bb6-1057';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=fc59bb6-1057';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=fc59bb6-1057';
 
 const DAYS = 60;
 const TZ = 9;
@@ -50,11 +50,21 @@ const favSites = () => new Set(store.get('favSites', []));
 const isFav = (id) => favSites().has(id);
 function toggleFav(id) { const s = favSites(); if (s.has(id)) s.delete(id); else s.add(id); store.set('favSites', [...s]); }
 
+// 処理中の表示。重い計算の前に一度ブラウザへ描画を返す
+const yieldToBrowser = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+function setBusy(on, label) {
+  state.busy = on;
+  $('#busyBar').hidden = !on;
+  document.body.classList.toggle('busy', on);
+  $('#status').innerHTML = on ? `<span class="spinner"></span>${esc(label ?? '計算中…')}` : '';
+}
+
 const state = {
   satrec: null, sites: [], stations: [], rows: [], transit: null,
   dateKey: null, pass: null, entries: [], from: null, // from: 出発地 {id, name, lat, lon, lines}
   site: null, sitePass: null,
   plan: null, // { good, withWeather, cloudyNote, best }
+  busy: false,
 };
 
 // ---------- 軌道 ----------
@@ -75,7 +85,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=84eeecd-1040');
+  const res = await fetch('./data/iss.tle?v=fc59bb6-1057');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -123,7 +133,7 @@ function renderLists(rows) {
     const tr = row(r);
     tr.className = 'day-row';
     tr.title = 'この日を調べる';
-    tr.addEventListener('click', () => { $('#plan [name=date]').value = r.night; runPlan().catch(showError); });
+    tr.addEventListener('click', () => { if (state.busy) return; $('#plan [name=date]').value = r.night; runPlan().catch(showError); });
     tbE.appendChild(tr);
     lastNight = r.night;
   }
@@ -166,7 +176,7 @@ function hideDetails() {
   stopCompass();
 }
 
-function renderHeadline(dateKey, plan, now) {
+async function renderHeadline(dateKey, plan, now) {
   const isToday = dateKey === localDate(now);
   const label = isToday ? '今夜' : `${md(dateKey)}の夕方`;
   const pick = $('#passPick');
@@ -194,7 +204,7 @@ function renderHeadline(dateKey, plan, now) {
         pick.appendChild(b);
       });
     }
-    selectPass(r, first.kind);
+    await selectPass(r, first.kind);
   } else {
     $('#headline').innerHTML = `<span class="ng">${label}は見えません</span>`;
     const w = plan.nextWindow;
@@ -216,6 +226,8 @@ async function selectPass(r, kind = 'evening') {
   $('#sitesCard').hidden = false;
   $('#recoCard').hidden = false;
   $('#reco').innerHTML = '<p class="muted">候補地と天気と経路を調べています…</p>';
+  $('#sitesNote').innerHTML = '<span class="spinner"></span>候補地ごとの見え方を計算中…';
+  await yieldToBrowser();
   $('#sitesList').replaceChildren();
   $('#goBest').hidden = true;
   state.plan = null;
@@ -228,7 +240,7 @@ async function selectPass(r, kind = 'evening') {
     $('#sitesNote').textContent = `天気予報は${FORECAST_DAYS}日先までです。この日は予報がまだ無いので、雲を見ずに候補地を並べています。近づいたらもう一度調べてください。`;
     entries = state.sites.map((s) => ({ site: s, w: { available: false }, pass: sitePass(s, r) }));
   } else {
-    $('#sitesNote').textContent = '天気を取得中…';
+    $('#sitesNote').innerHTML = '<span class="spinner"></span>天気を取得中…';
     try {
       const hourly = await hourlyAll();
       entries = state.sites.map((s, i) => ({ site: s, w: assessSite(hourly[i], r.peak.d), pass: sitePass(s, r) }));
@@ -243,6 +255,7 @@ async function selectPass(r, kind = 'evening') {
     }
   }
   // 出発地からの経路と所要
+  if (state.from) { $('#sitesNote').innerHTML = '<span class="spinner"></span>電車とバスの経路を計算中…'; await yieldToBrowser(); }
   for (const e of entries) e.travel = state.from ? computeTravel(e.site) : null;
   // 並べ替え: 晴れ > 雲量 > 所要時間 > 徒歩
   const score = (e) => {
@@ -814,14 +827,23 @@ function registerOrigin(name) {
 }
 
 async function runPlan() {
-  $('#status').textContent = '計算中…';
-  state.dateKey = $('#plan [name=date]').value;
-  readFrom();
-  const plan = planForDate(state.dateKey);
-  enableScreen(2);
-  showScreen(2);
-  renderHeadline(state.dateKey, plan, new Date());
-  $('#status').textContent = '';
+  if (state.busy) return;
+  setBusy(true, 'その日の通過を計算中…');
+  try {
+    state.dateKey = $('#plan [name=date]').value;
+    readFrom();
+    enableScreen(2);
+    showScreen(2);
+    $('#headline').innerHTML = '<span class="spinner"></span>計算中…';
+    $('#headlineDetail').textContent = 'ISS の通過、天気、経路を順に調べています。数秒かかります。';
+    $('#passPick').replaceChildren();
+    $('#sitesCard').hidden = true;
+    await yieldToBrowser();
+    const plan = planForDate(state.dateKey);
+    await renderHeadline(state.dateKey, plan, new Date());
+  } finally {
+    setBusy(false);
+  }
 }
 
 // ---------- ① 提案一覧 ----------
@@ -862,7 +884,7 @@ async function renderProposals() {
     b.type = 'button';
     b.className = `proposal ${cls}`;
     b.innerHTML = `<div class="when">${md(r.night)} ${kind === 'morning' ? '翌朝 ' : ''}${hhmm(r.visStart)}〜${hhmm(r.visEnd)} <span class="meta">最大の高さ${r.maxEl.toFixed(0)}°・${dir16(r.start.az)}から${dir16(r.end.az)}へ${kind === 'morning' ? '・始発で帰る' : ''}</span></div>${where}`;
-    b.addEventListener('click', () => { $('#plan [name=date]').value = r.night; runPlan().catch(showError); });
+    b.addEventListener('click', () => { if (state.busy) return; b.classList.add('loading'); $('#plan [name=date]').value = r.night; runPlan().catch(showError).finally(() => b.classList.remove('loading')); });
     return b;
   };
   const box = $('#proposals');
@@ -885,8 +907,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=84eeecd-1040').then((r) => r.json()),
-    fetch('./data/stations.json?v=84eeecd-1040').then((r) => r.json()),
+    fetch('./data/sites.json?v=fc59bb6-1057').then((r) => r.json()),
+    fetch('./data/stations.json?v=fc59bb6-1057').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
@@ -895,11 +917,59 @@ async function init() {
   state.transit = transit;
   const sel = $('#fromForm [name=from]');
   renderFromOptions(store.get('fromStation', ''));
+  // 駅名の候補（漢字・読み・ローマ字のどれでも）。打つたびに絞り込んで表示する
   if (transit) {
-    const dl = $('#stationNames');
-    for (const n of [...new Set(transit.data.stations.map((s) => s.n))].sort()) { const o = document.createElement('option'); o.value = n; dl.appendChild(o); }
+    const index = new Map(); // 駅名 -> { kana, roma, lines }
+    for (const s of transit.data.stations) {
+      const e = index.get(s.n) ?? index.set(s.n, { kana: new Set(), roma: new Set(), lines: new Set() }).get(s.n);
+      if (s.k) e.kana.add(s.k);
+      const tail = s.id.split('.').pop(); if (tail) e.roma.add(tail.toLowerCase());
+      const ln = transit.railwayById.get(s.r)?.n; if (ln) e.lines.add(ln);
+    }
+    const kataToHira = (str) => str.replace(/[\u30a1-\u30f6]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+    const q = $('#originForm [name=q]');
+    const box = $('#originSuggest');
+    const render = () => {
+      const raw = q.value.trim().replace(/駅$/, '');
+      if (!raw) { box.hidden = true; box.replaceChildren(); return; }
+      const v = kataToHira(raw);
+      const vl = raw.toLowerCase();
+      const hits = [];
+      for (const [name, e] of index) {
+        let rank = -1;
+        if (name.startsWith(raw)) rank = 0;
+        else if ([...e.kana].some((k) => kataToHira(k).startsWith(v))) rank = 1;
+        else if ([...e.roma].some((r) => r.startsWith(vl))) rank = 2;
+        else if (name.includes(raw)) rank = 3;
+        else if ([...e.kana].some((k) => kataToHira(k).includes(v))) rank = 4;
+        if (rank >= 0) hits.push({ name, rank, e });
+      }
+      hits.sort((a, b) => a.rank - b.rank || a.name.length - b.name.length || a.name.localeCompare(b.name, 'ja'));
+      const top = hits.slice(0, 8);
+      box.replaceChildren();
+      for (const h of top) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.innerHTML = `<span class="nm">${esc(h.name)}駅</span><span class="ln">${[...h.e.lines].slice(0, 3).map(esc).join('・')}${h.e.lines.size > 3 ? ' ほか' : ''}</span>`;
+        b.addEventListener('click', () => { $('#originMsg').textContent = registerOrigin(h.name); q.value = ''; box.hidden = true; });
+        box.appendChild(b);
+      }
+      if (!top.length) { const p = document.createElement('div'); p.className = 'muted small'; p.textContent = '首都圏の鉄道駅に見つかりません（漢字・ひらがな・ローマ字で入力）'; box.appendChild(p); }
+      box.hidden = false;
+    };
+    q.addEventListener('input', render);
+    q.addEventListener('focus', render);
+    $('#originReg').addEventListener('toggle', () => { if ($('#originReg').open) setTimeout(() => q.focus(), 50); });
   }
-  $('#originForm').addEventListener('submit', (e) => { e.preventDefault(); $('#originMsg').textContent = registerOrigin(new FormData(e.target).get('q') || ''); e.target.reset(); });
+  $('#originForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    // Enter は先頭の候補を登録
+    const first = $('#originSuggest button');
+    if (first && !$('#originSuggest').hidden) { first.click(); return; }
+    $('#originMsg').textContent = registerOrigin(new FormData(e.target).get('q') || '');
+    e.target.reset();
+    $('#originSuggest').hidden = true;
+  });
   sel.addEventListener('change', () => { store.set('fromStation', sel.value); readFrom(); renderProposals().catch(console.error); if (state.pass) runPlanKeepScreen().catch(showError); });
   const ep = tleEpoch(state.satrec);
   $('#tleInfo').textContent = `軌道データ: ${source}。基準時刻 ${jst(ep).toISOString().replace('T', ' ').slice(0, 16)}。基準時刻から日が離れるほど、予測時刻が数分ずれます。`
@@ -926,7 +996,7 @@ function showError(err) {
   console.error(err);
 }
 
-$('#plan').addEventListener('submit', (e) => { e.preventDefault(); runPlan().catch(showError); });
+$('#plan').addEventListener('submit', (e) => { e.preventDefault(); if (!state.busy) runPlan().catch(showError); });
 $('#fromForm').addEventListener('submit', (e) => e.preventDefault());
 const shownTrivia = new Set();
 function nextTrivia() {
