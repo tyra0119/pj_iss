@@ -1,14 +1,14 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=db7b130-1321';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=db7b130-1321';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=db7b130-1321';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=db7b130-1321';
-import { loadTransit } from './lib/transit.mjs?v=db7b130-1321';
-import { packingList } from './lib/packing.mjs?v=db7b130-1321';
-import { randomTrivia } from './lib/trivia.mjs?v=db7b130-1321';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=db7b130-1321';
-import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=db7b130-1321';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=db7b130-1321';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=db7b130-1321';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=0e71034-1327';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=0e71034-1327';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=0e71034-1327';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=0e71034-1327';
+import { loadTransit } from './lib/transit.mjs?v=0e71034-1327';
+import { packingList } from './lib/packing.mjs?v=0e71034-1327';
+import { randomTrivia } from './lib/trivia.mjs?v=0e71034-1327';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=0e71034-1327';
+import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=0e71034-1327';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=0e71034-1327';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=0e71034-1327';
 
 const DAYS = 60;
 const TZ = 9;
@@ -85,7 +85,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=db7b130-1321');
+  const res = await fetch('./data/iss.tle?v=0e71034-1327');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -801,6 +801,10 @@ async function selectSite(e, tr, { go = false } = {}) {
     if (go) showScreen(3);
   }
   document.querySelectorAll('#sitesList .site-card').forEach((x) => x.classList.toggle('selected', x === tr));
+  // 見方の説明・図・アニメーションは、その場所での通過（方角と高さが少し違う）で描き直し、最初から再生する
+  $('#describe').innerHTML = describePass(e.pass).map((t) => `<p>${t}</p>`).join('');
+  $('#scene').innerHTML = observationSceneSvg(e.pass);
+  setupFirstPerson(e.pass);
   $('#onsiteCard').hidden = false;
   $('#onsiteSite').innerHTML = `<strong>${esc(e.site.name)}</strong>（${esc(e.site.station)}駅 徒歩${e.site.walkMin}分）。${esc(e.site.landmark)}。`;
   stopCompass();
@@ -964,8 +968,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=db7b130-1321').then((r) => r.json()),
-    fetch('./data/stations.json?v=db7b130-1321').then((r) => r.json()),
+    fetch('./data/sites.json?v=0e71034-1327').then((r) => r.json()),
+    fetch('./data/stations.json?v=0e71034-1327').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);

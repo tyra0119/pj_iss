@@ -100,7 +100,8 @@ export function observationSceneSvg(p, width = 720, height = 300) {
   const y = (el) => horizonY - (el / 90) * (horizonY - 30);
   const pts = [p.start, p.peak, p.end];
   // 3点を通る滑らかな曲線（二次ベジェ2本）
-  const path = `M${x(p.start.az).toFixed(1)},${y(p.start.el).toFixed(1)} Q${x(p.peak.az).toFixed(1)},${(y(p.peak.el) - 20).toFixed(1)} ${x(p.peak.az).toFixed(1)},${y(p.peak.el).toFixed(1)} T${x(p.end.az).toFixed(1)},${y(p.end.el).toFixed(1)}`;
+  const trk = passTrack(p);
+  const path = Array.from({ length: 41 }, (_, i) => { const q = trk.at(i / 40); return `${i ? 'L' : 'M'}${x(q.az).toFixed(1)},${y(q.el).toFixed(1)}`; }).join(' ');
   const dirs = [];
   for (let d = -half; d <= half; d += 30) {
     const az = (centerAz + d + 360) % 360;
@@ -147,17 +148,48 @@ const dir16 = (az) => DIRS16[Math.round((((az % 360) + 360) % 360) / 22.5) % 16]
 const hhmm = (d) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(11, 16);
 const hhmmss = (d) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(11, 19);
 
-/** 出現→最高→消失 を通る滑らかな軌跡（方位は出現からの相対角で連続にする）。t は 0..1 */
+/**
+ * 観測者から見た ISS の軌跡。ISS は高さ約 420 km を直線的に飛ぶとみなし、
+ * 「最高点の方向・距離」と「出現の方向・時刻」から速度と進行方向を決めて、任意の時刻の方角・高さを出す。
+ * 空の上では戻らず、ほぼ大円に沿って進む。t は 0（出現）..1（消失）
+ */
 export function passTrack(p) {
-  const rel = (az) => ((az - p.start.az + 540) % 360) - 180;
-  const s = { a: 0, e: p.start.el }, k = { a: rel(p.peak.az), e: p.peak.el }, e = { a: rel(p.end.az), e: p.end.el };
-  // t=0.5 で最高点を通る 2 次ベジェ
-  const c = { a: 2 * k.a - (s.a + e.a) / 2, e: 2 * k.e - (s.e + e.e) / 2 };
-  const at = (t) => {
-    const u = 1 - t;
-    return { az: (p.start.az + u * u * s.a + 2 * u * t * c.a + t * t * e.a + 360) % 360, el: Math.max(0, u * u * s.e + 2 * u * t * c.e + t * t * e.e), d: new Date(p.start.d.getTime() + t * (p.end.d - p.start.d)) };
+  const D = Math.PI / 180;
+  const unit = (az, el) => [Math.cos(el * D) * Math.sin(az * D), Math.cos(el * D) * Math.cos(az * D), Math.sin(el * D)]; // 東, 北, 上
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const norm = (a) => Math.hypot(a[0], a[1], a[2]);
+  const H = 420; // km
+  const up = unit(p.peak.az, p.peak.el);
+  const dPeak = H / Math.max(Math.sin(p.peak.el * D), 0.05); // 最高点での距離（地球の丸みは無視）
+  const Pp = up.map((c) => c * dPeak);
+  // 基準点（出現 or 消失）の方向から、進行方向と速さを決めた直線モデル
+  const model = (ref) => {
+    const us = unit(ref.az, ref.el);
+    const cosang = Math.max(dot(us, up), 0.05);
+    const lambda = dPeak / cosang;
+    const w = [us[0] * lambda - Pp[0], us[1] * lambda - Pp[1], us[2] * lambda - Pp[2]]; // 最高点→基準点
+    const len = norm(w) || 1;
+    const sign = ref.d < p.peak.d ? -1 : 1;
+    const uv = w.map((c) => (c / len) * sign);
+    const v = len / Math.max(Math.abs(ref.d - p.peak.d) / 1000, 1);
+    return (date) => {
+      const sec = (date - p.peak.d) / 1000;
+      const P = [Pp[0] + uv[0] * v * sec, Pp[1] + uv[1] * v * sec, Pp[2] + uv[2] * v * sec];
+      return { az: (Math.atan2(P[0], P[1]) / D + 360) % 360, el: Math.max(0, Math.atan2(P[2], Math.hypot(P[0], P[1])) / D) };
+    };
   };
-  return { at, durMs: p.end.d - p.start.d };
+  const okS = Math.abs(p.start.d - p.peak.d) > 5000, okE = Math.abs(p.end.d - p.peak.d) > 5000;
+  const mS = model(okS ? p.start : p.end), mE = model(okE ? p.end : p.start);
+  const durMs = p.end.d - p.start.d;
+  // 出現側のモデルと消失側のモデルを、時間の割合で混ぜる（両端は正確、途中は滑らか）
+  const at = (t) => {
+    const date = new Date(p.start.d.getTime() + t * durMs);
+    const a = mS(date), b = mE(date);
+    const w = okS && okE ? t : (okS ? 0 : 1);
+    const dAz = ((b.az - a.az + 540) % 360) - 180;
+    return { az: (a.az + dAz * w + 360) % 360, el: a.el + (b.el - a.el) * w, d: date };
+  };
+  return { at, durMs };
 }
 
 export function firstPersonSvg(p, opts = {}, width = 720, height = 420) {
