@@ -214,7 +214,7 @@ async function selectPass(r, kind = 'evening') {
   $('#sitesCard').hidden = false;
   $('#recoCard').hidden = false;
   $('#reco').innerHTML = '<p class="muted">候補地と天気と経路を調べています…</p>';
-  $('#sites tbody').replaceChildren();
+  $('#sitesList').replaceChildren();
   $('#goBest').hidden = true;
   state.plan = null;
   disableScreens(3);
@@ -351,27 +351,31 @@ function firstLastFor(route, holiday) {
 }
 
 function renderSites(entries, withWeather) {
-  const tb = $('#sites tbody');
-  tb.replaceChildren();
+  const box = $('#sitesList');
+  box.replaceChildren();
   entries.forEach((e, i) => {
-    const tr = document.createElement('tr');
+    const card = document.createElement('div');
     const cloud = e.w.available ? `${e.w.obs.cloudLowMid}%` : '予報なし';
     const obsBadge = !e.pass ? '<span class="badge ng">条件外</span>'
-      : !e.w.available ? '<span class="badge">未定</span>'
+      : !e.w.available ? '<span class="badge">天気未定</span>'
         : e.w.observable ? '<span class="badge ok">晴れ</span>' : '<span class="badge ng">雲</span>';
     const warns = warnsOf(e);
-    const travel = e.travel ? `約${e.travel.totalMin}分${e.travel.source === 'estimate' ? '<span class="muted">*</span>' : ''}` : '—';
-    tr.innerHTML = `<td class="num">${i + 1}</td>`
-      + `<td class="wrap"><button type="button" class="star" aria-pressed="${isFav(e.site.id)}" title="お気に入り" data-fav="${esc(e.site.id)}">${isFav(e.site.id) ? '★' : '☆'}</button><strong>${esc(e.site.name)}</strong><br><span class="muted small">${esc(e.site.landmark)}</span>${e.site.nightAccess === '不明' ? '<br><span class="warn small">夜間に入れるか公式の記載が見つかっていません</span>' : e.site.nightAccess === '常時開園' ? '<br><span class="muted small">常時開園（公式サイトで確認）</span>' : ''}</td>`
-      + `<td class="wrap">${esc(e.site.station)}駅 徒歩${e.site.walkMin}分<br><span class="muted small">${e.site.lines.map(esc).join('・')}</span></td>`
-      + `<td class="num">${travel}</td>`
-      + `<td class="num">${cloud}</td><td>${obsBadge}</td>`
-      + `<td class="wrap small ${warns.length ? 'warn' : 'muted'}">${warns.length ? warns.join('<br>') : (e.w.available ? '特になし' : '')}</td>`
-      + `<td>${e.pass ? '<button type="button" class="small primary">ここで見る →</button>' : ''}</td>`;
-    tr.className = 'site-row';
-    tr.addEventListener('click', () => selectSite(e, tr, { go: true }));
-    tr.querySelector('button.star').addEventListener('click', (ev) => { ev.stopPropagation(); toggleFav(e.site.id); selectPass(state.pass, state.passKind); });
-    tb.appendChild(tr);
+    const travel = e.travel ? `${state.from ? esc(state.from.name) + 'から' : ''}約${e.travel.totalMin}分${e.travel.source === 'estimate' ? '<span class="muted">（概算）</span>' : ''}` : '';
+    const access = e.site.nightAccess === '不明' ? '<div class="line warn">夜間に入れるか公式の記載が見つかっていません</div>' : e.site.nightAccess === '常時開園' ? '<div class="line">常時開園（公式サイトで確認）</div>' : '';
+    card.className = `site-card${e.pass ? '' : ' dim'}`;
+    card.innerHTML = `
+      <div class="top">
+        <div><span class="rank">${i + 1}</span><button type="button" class="star" aria-pressed="${isFav(e.site.id)}" title="お気に入り" data-fav="${esc(e.site.id)}">${isFav(e.site.id) ? '★' : '☆'}</button><span class="name">${esc(e.site.name)}</span></div>
+        <div class="cloud">${obsBadge}<br><span class="muted small">雲 ${cloud}</span></div>
+      </div>
+      <div class="line">${esc(e.site.station)}駅 徒歩${e.site.walkMin}分（${e.site.lines.map(esc).join('・')}）${travel ? `・${travel}` : ''}</div>
+      <div class="line">${esc(e.site.landmark)}</div>
+      ${access}
+      ${warns.length ? `<div class="warn">注意: ${warns.join('、')}</div>` : ''}
+      ${e.pass ? '<div class="act"><button type="button" class="primary">ここで見る →</button></div>' : ''}`;
+    card.addEventListener('click', () => selectSite(e, card, { go: true }));
+    card.querySelector('button.star').addEventListener('click', (ev) => { ev.stopPropagation(); toggleFav(e.site.id); selectPass(state.pass, state.passKind); });
+    box.appendChild(card);
   });
 }
 
@@ -389,7 +393,7 @@ async function renderRecommendation(entries, withWeather) {
   const pick = best ?? pickFrom[0];
   if (!pick) { box.innerHTML = cloudyNote || '<p class="ng">この日に条件を満たす候補地がありません。</p>'; $('#onsiteCard').hidden = true; return; }
   state.plan = { good: pickFrom, withWeather, cloudyNote, best: pick };
-  const tr = [...document.querySelectorAll('#sites tr.site-row')][entries.indexOf(pick)];
+  const tr = [...document.querySelectorAll('#sitesList .site-card')][entries.indexOf(pick)];
   const btn = $('#goBest');
   btn.hidden = false;
   btn.textContent = `${cloudyNote ? '参考: ' : 'おすすめ: '}${pick.site.name} で計画を見る →`;
@@ -561,7 +565,7 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
   `;
   box.querySelectorAll('button[data-site]').forEach((b) => b.addEventListener('click', () => {
     const e = state.entries.find((x) => x.site.id === b.dataset.site);
-    const tr = [...document.querySelectorAll('#sites tr.site-row')][state.entries.indexOf(e)];
+    const tr = [...document.querySelectorAll('#sitesList .site-card')][state.entries.indexOf(e)];
     selectSite(e, tr);
   }));
   if (tv && !overnight) fillTrains(best, tv, holiday, arriveBy, leaveSite).catch(console.error);
@@ -615,7 +619,7 @@ async function renderTrainInfo(best, good) {
     el.innerHTML = html;
     el.querySelectorAll('button[data-alt]').forEach((b) => b.addEventListener('click', () => {
       const e = state.entries.find((x) => x.site.id === b.dataset.alt);
-      const tr = [...document.querySelectorAll('#sites tr.site-row')][state.entries.indexOf(e)];
+      const tr = [...document.querySelectorAll('#sitesList .site-card')][state.entries.indexOf(e)];
       selectSite(e, tr, { go: true });
     }));
   } catch (err) {
@@ -633,7 +637,7 @@ async function selectSite(e, tr, { go = false } = {}) {
     enableScreen(3);
     if (go) showScreen(3);
   }
-  document.querySelectorAll('#sites tr.site-row').forEach((x) => x.classList.toggle('selected', x === tr));
+  document.querySelectorAll('#sitesList .site-card').forEach((x) => x.classList.toggle('selected', x === tr));
   $('#onsiteCard').hidden = false;
   $('#onsiteSite').innerHTML = `<strong>${esc(e.site.name)}</strong>（${esc(e.site.station)}駅 徒歩${e.site.walkMin}分）。${esc(e.site.landmark)}。`;
   stopCompass();

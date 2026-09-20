@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ISS を見に行く（首都圏）</title>
+<title>そうだ。ISSを見に行こう！</title>
 <meta name="description" content="首都圏で ISS（国際宇宙ステーション）が肉眼ではっきり見える日と場所を提案し、電車での行き方と帰りの終電まで計画します。">
 <script type="importmap">{"imports":{"satellite.js":"https://cdn.jsdelivr.net/npm/satellite.js@7.1.0/+esm"}}</script>
 <style>
@@ -76,11 +76,24 @@
   #originList{list-style:none;padding:0;margin:8px 0 0}
   #originList li{display:flex;gap:8px;align-items:center;margin:4px 0}
   .train{margin:4px 0}
+  .sitelist{display:grid;gap:10px}
+  .site-card{background:#0f1630;border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer}
+  .site-card:hover{border-color:var(--accent)}
+  .site-card.selected{border-color:var(--accent);background:rgba(255,209,102,.06)}
+  .site-card.dim{opacity:.6}
+  .site-card .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+  .site-card .name{font-weight:700;font-size:1rem}
+  .site-card .rank{color:var(--muted);font-size:.85rem;margin-right:4px}
+  .site-card .cloud{white-space:nowrap;text-align:right;font-size:.9rem}
+  .site-card .line{color:var(--muted);font-size:.85rem;margin-top:2px}
+  .site-card .warn{font-size:.85rem;margin-top:2px}
+  .site-card .act{margin-top:8px;display:flex;justify-content:flex-end}
+  .site-card .act button{padding:6px 12px}
 </style>
 </head>
 <body>
 <main>
-  <h1>ISS を見に行く（首都圏）</h1>
+  <h1>そうだ。ISSを見に行こう！</h1>
   <p class="sub">肉眼ではっきり見える日と場所を提案し、電車での行き方と帰りの終電まで計画します。<span id="status" class="small"></span></p>
 
   <nav class="steps" aria-label="手順">
@@ -143,7 +156,7 @@
     <div id="sitesCard" class="card" hidden>
       <h2>観測場所を選んでください</h2>
       <p id="sitesNote" class="muted small"></p>
-      <div class="scroll"><table id="sites"><thead><tr><th>順位</th><th>場所</th><th>最寄駅</th><th class="num">所要の目安</th><th class="num">雲（低い雲＋中間の雲）</th><th>観測</th><th class="wrap">移動の注意</th><th></th></tr></thead><tbody></tbody></table></div>
+      <div id="sitesList" class="sitelist"></div>
       <p class="muted small">所要時間は ODPT の路線・駅・時刻表データから計算した鉄道経路（徒歩と乗換の待ちを含む）です。* が付いたものは駅データに無いため距離からの概算です。上ほどおすすめです。☆ を押すとお気に入りになり、晴れていれば優先して提案します。</p>
     </div>
   </section>
