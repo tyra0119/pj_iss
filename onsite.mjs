@@ -1,5 +1,5 @@
 // 現地でどっちを向くか: 地図に矢印（センサー不要）＋ スマホのコンパス（DeviceOrientation）
-import { dir16 } from './lib/describe.mjs?v=fa7b552-2110';
+import { dir16 } from './lib/describe.mjs?v=b250c5b-2113';
 
 const ACC = '#ffd166';
 
@@ -34,31 +34,33 @@ function destination(lat, lon, bearingDeg, meters) {
 let map = null, layer = null, meLayer = null, watchId = null;
 
 // 地図の右上に「全画面」「現在地」のボタンを置く
-function addMapButtons(L, el) {
+function addMapButtons(L, el, target = map, withLocate = true) {
   const Ctl = L.Control.extend({
     onAdd() {
       const box = L.DomUtil.create('div', 'leaflet-bar map-btns');
       const full = L.DomUtil.create('a', 'map-btn', box);
       full.href = '#'; full.title = '全画面で見る'; full.setAttribute('role', 'button'); full.textContent = '⤢';
-      const me = L.DomUtil.create('a', 'map-btn', box);
-      me.href = '#'; me.title = '現在地を表示'; me.setAttribute('role', 'button'); me.textContent = '◎';
       L.DomEvent.disableClickPropagation(box);
-      L.DomEvent.on(full, 'click', (e) => { L.DomEvent.preventDefault(e); toggleFullscreen(el, full); });
-      L.DomEvent.on(me, 'click', (e) => { L.DomEvent.preventDefault(e); locateMe(L, me); });
+      L.DomEvent.on(full, 'click', (e) => { L.DomEvent.preventDefault(e); toggleFullscreen(el, full, target); });
+      if (withLocate) {
+        const me = L.DomUtil.create('a', 'map-btn', box);
+        me.href = '#'; me.title = '現在地を表示'; me.setAttribute('role', 'button'); me.textContent = '◎';
+        L.DomEvent.on(me, 'click', (e) => { L.DomEvent.preventDefault(e); locateMe(L, me); });
+      }
       return box;
     },
   });
-  map.addControl(new Ctl({ position: 'topright' }));
+  target.addControl(new Ctl({ position: 'topright' }));
 }
 
-function toggleFullscreen(el, btn) {
+function toggleFullscreen(el, btn, target = map) {
   const on = !el.classList.contains('full');
   el.classList.toggle('full', on);
   document.body.classList.toggle('map-fullscreen', on);
   if (btn) { btn.textContent = on ? '✕' : '⤢'; btn.title = on ? '全画面をやめる' : '全画面で見る'; }
-  setTimeout(() => map.invalidateSize(), 60);
+  setTimeout(() => target.invalidateSize(), 60);
   if (on) {
-    const onKey = (e) => { if (e.key === 'Escape') { toggleFullscreen(el, btn); window.removeEventListener('keydown', onKey); } };
+    const onKey = (e) => { if (e.key === 'Escape') { toggleFullscreen(el, btn, target); window.removeEventListener('keydown', onKey); } };
     window.addEventListener('keydown', onKey);
   }
 }
@@ -145,6 +147,7 @@ export async function showOrbitMap(containerId, track, vis, site) {
   if (!orbitMap) {
     orbitMap = L.map(el, { zoomControl: true, attributionControl: true, worldCopyJump: true });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(orbitMap);
+    addMapButtons(L, el, orbitMap, false);
   }
   if (orbitLayer) orbitLayer.remove();
   orbitLayer = L.layerGroup().addTo(orbitMap);
