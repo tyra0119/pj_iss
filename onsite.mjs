@@ -1,5 +1,5 @@
 // 現地でどっちを向くか: 地図に矢印（センサー不要）＋ スマホのコンパス（DeviceOrientation）
-import { dir16 } from './lib/describe.mjs?v=a6489d9-1334';
+import { dir16 } from './lib/describe.mjs?v=9b5dbaa-1345';
 
 const ACC = '#ffd166';
 
@@ -129,6 +129,49 @@ export async function showSiteMap(containerId, site, pass) {
   // 北向きの目印
   const n = destination(site.lat, site.lon, 0, 150);
   L.marker(n, { icon: L.divIcon({ className: 'arrow-label north', html: '<span>北</span>', iconSize: null }) }).addTo(layer);
+}
+
+// ---- ISS の地上軌跡の地図（折りたたみを開いたときだけ描く） ----
+let orbitMap = null, orbitLayer = null;
+/**
+ * @param {string} containerId
+ * @param {{d:Date,lat:number,lon:number,alt:number}[]} track 前後 10 分ほどの地上軌跡
+ * @param {{start:Date,end:Date,peak:Date}} vis 見えている時間
+ * @param {{lat:number,lon:number,name:string}} site 観測地点
+ */
+export async function showOrbitMap(containerId, track, vis, site) {
+  const L = await loadLeaflet();
+  const el = document.getElementById(containerId);
+  if (!orbitMap) {
+    orbitMap = L.map(el, { zoomControl: true, attributionControl: true, worldCopyJump: true });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(orbitMap);
+  }
+  if (orbitLayer) orbitLayer.remove();
+  orbitLayer = L.layerGroup().addTo(orbitMap);
+  const pts = track.map((p) => [p.lat, p.lon]);
+  // 経度が ±180 をまたぐと線が飛ぶので、またいだところで切る
+  const segs = []; let cur = [];
+  for (let i = 0; i < pts.length; i++) { if (i && Math.abs(pts[i][1] - pts[i - 1][1]) > 180) { segs.push(cur); cur = []; } cur.push(pts[i]); }
+  segs.push(cur);
+  for (const s of segs) L.polyline(s, { color: '#9aa4bf', weight: 3, opacity: 0.8, dashArray: '6 8' }).addTo(orbitLayer);
+  const visPts = track.filter((p) => p.d >= vis.start && p.d <= vis.end).map((p) => [p.lat, p.lon]);
+  if (visPts.length > 1) L.polyline(visPts, { color: '#ffd166', weight: 6, opacity: 0.95 }).addTo(orbitLayer);
+  const hhmm = (d) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(11, 16);
+  const near = (t) => track.reduce((a, b) => (Math.abs(b.d - t) < Math.abs(a.d - t) ? b : a));
+  const mk = (t, label, color) => { const p = near(t); L.circleMarker([p.lat, p.lon], { radius: 7, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1 }).addTo(orbitLayer).bindTooltip(label, { permanent: true, direction: 'right', className: 'tip-orbit' }); return p; };
+  const ps = mk(vis.start, `① 現れる ${hhmm(vis.start)}`, '#ffd166');
+  const pk = mk(vis.peak, `② いちばん高い ${hhmm(vis.peak)}`, '#ff9f43');
+  const pe = mk(vis.end, `③ 消える ${hhmm(vis.end)}`, '#9aa4bf');
+  L.circleMarker([site.lat, site.lon], { radius: 8, color: '#fff', weight: 2, fillColor: '#3b82f6', fillOpacity: 1 }).addTo(orbitLayer).bindTooltip(`あなた（${site.name}）`, { permanent: true, direction: 'left', className: 'tip-here' });
+  // 見えている間の「あなた → ISS の真下」の線（どれだけ遠くを見ているか）
+  for (const p of [ps, pk, pe]) L.polyline([[site.lat, site.lon], [p.lat, p.lon]], { color: '#3b82f6', weight: 1.5, opacity: 0.6, dashArray: '2 6' }).addTo(orbitLayer);
+  const b = L.latLngBounds([[site.lat, site.lon], ...visPts.length ? visPts : pts]);
+  orbitMap.fitBounds(b.pad(0.35));
+  // 折りたたみを開いた直後は大きさが確定していないので、少し待ってから合わせ直す
+  for (const ms of [80, 400, 1000]) setTimeout(() => { orbitMap.invalidateSize(); orbitMap.fitBounds(b.pad(0.35), { maxZoom: 7 }); }, ms);
+  // 距離のメモ
+  const km = (a, b2) => { const d = Math.PI / 180, R = 6371; const dl = (b2.lat - a.lat) * d, dn = (b2.lon - a.lon) * d; const h = Math.sin(dl / 2) ** 2 + Math.cos(a.lat * d) * Math.cos(b2.lat * d) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+  return { startKm: Math.round(km(site, ps)), peakKm: Math.round(km(site, pk)), endKm: Math.round(km(site, pe)), altKm: Math.round(pk.alt) };
 }
 
 // ---- コンパス（現地モード） ----

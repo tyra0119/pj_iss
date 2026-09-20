@@ -1,14 +1,14 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA } from './lib/passes.mjs?v=a6489d9-1334';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=a6489d9-1334';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=a6489d9-1334';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=a6489d9-1334';
-import { loadTransit } from './lib/transit.mjs?v=a6489d9-1334';
-import { packingList } from './lib/packing.mjs?v=a6489d9-1334';
-import { randomTrivia } from './lib/trivia.mjs?v=a6489d9-1334';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=a6489d9-1334';
-import { showSiteMap, startCompass, stopCompass } from './onsite.mjs?v=a6489d9-1334';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=a6489d9-1334';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=a6489d9-1334';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=9b5dbaa-1345';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=9b5dbaa-1345';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=9b5dbaa-1345';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=9b5dbaa-1345';
+import { loadTransit } from './lib/transit.mjs?v=9b5dbaa-1345';
+import { packingList } from './lib/packing.mjs?v=9b5dbaa-1345';
+import { randomTrivia } from './lib/trivia.mjs?v=9b5dbaa-1345';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=9b5dbaa-1345';
+import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=9b5dbaa-1345';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=9b5dbaa-1345';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=9b5dbaa-1345';
 
 const DAYS = 60;
 const TZ = 9;
@@ -85,7 +85,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=a6489d9-1334');
+  const res = await fetch('./data/iss.tle?v=9b5dbaa-1345');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -251,6 +251,15 @@ function setupFirstPerson(r) {
   $('#fpPlay').textContent = '▶ 動きを見る';
   if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) setTimeout(() => { if (fp.pass === r && !fp.playing && fp.t === 0) fpPlay(); }, 800);
 }
+// ISS の地上軌跡（折りたたみを開いたときに描く）
+async function drawOrbit() {
+  const o = state.orbitFor; if (!o || !state.satrec) return;
+  const p = o.pass;
+  const track = groundTrack(state.satrec, new Date(p.start.d.getTime() - 8 * 60e3), new Date(p.end.d.getTime() + 8 * 60e3), 10);
+  const info = await showOrbitMap('orbitMap', track, { start: p.start.d, end: p.end.d, peak: p.peak.d }, { lat: o.site.lat, lon: o.site.lon, name: o.site.name });
+  $('#orbitNote').textContent = `ISS は高さ約${info.altKm} kmを秒速約7.7 kmで飛んでいます。現れたときの真下はあなたから約${info.startKm} km、いちばん高いときで約${info.peakKm} km、消えるときで約${info.endKm} km離れたところです。見えているのは、その遠くの ISS に太陽の光が当たっている数分間です。`;
+}
+$('#orbitDetails').addEventListener('toggle', () => { if ($('#orbitDetails').open) drawOrbit().catch(console.error); });
 $('#fpPlay').addEventListener('click', () => { if (fp.playing) fpStop(); else fpPlay(); });
 $('#fpSeek').addEventListener('input', (e) => {
   // つまみで飛んだときも、そこまで顔を追いかけてきた向きになるよう 0 から追従し直す
@@ -805,6 +814,8 @@ async function selectSite(e, tr, { go = false } = {}) {
   $('#describe').innerHTML = describePass(e.pass).map((t) => `<p>${t}</p>`).join('');
   $('#scene').innerHTML = observationSceneSvg(e.pass);
   setupFirstPerson(e.pass);
+  state.orbitFor = { pass: e.pass, site: e.site };
+  if ($('#orbitDetails').open) drawOrbit().catch(console.error);
   $('#onsiteCard').hidden = false;
   $('#onsiteSite').innerHTML = `<strong>${esc(e.site.name)}</strong>（${esc(e.site.station)}駅 徒歩${e.site.walkMin}分）。${esc(e.site.landmark)}。`;
   stopCompass();
@@ -968,8 +979,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=a6489d9-1334').then((r) => r.json()),
-    fetch('./data/stations.json?v=a6489d9-1334').then((r) => r.json()),
+    fetch('./data/sites.json?v=9b5dbaa-1345').then((r) => r.json()),
+    fetch('./data/stations.json?v=9b5dbaa-1345').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
