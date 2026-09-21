@@ -280,3 +280,78 @@ ${pos.el <= maxEl ? `<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="26" 
 </g>
 </svg>`;
 }
+
+
+// 図5: 後ろ斜め上から見た「あなたと空のドーム」。地平線の輪、方角、頭上へ向かう軌跡、指さす腕
+// opts: { t, centerAz }（firstPersonSvg と同じ）
+export function domeViewSvg(p, opts = {}, width = 720, height = 460) {
+  const D = Math.PI / 180;
+  const track = passTrack(p);
+  const t = Math.max(0, Math.min(1, opts.t ?? 0));
+  const pos = track.at(t);
+  const centerAz = opts.centerAz ?? p.start.az;      // 正面（奥）にする方角
+  // 3D: x=右, y=奥, z=上。空は半径 1 の半球
+  const P3 = (az, el, r = 1) => { const a = (az - centerAz) * D, e = el * D; return [r * Math.cos(e) * Math.sin(a), r * Math.cos(e) * Math.cos(a), r * Math.sin(e)]; };
+  // カメラ: 観測者の後ろ 1.9、高さ 0.55 から、少し上向きに見る
+  const E = [0, -2.3, 1.0], F = [0, 0.25, 0.55];
+  const f = (() => { const d = [F[0] - E[0], F[1] - E[1], F[2] - E[2]]; const n = Math.hypot(...d); return d.map((c) => c / n); })();
+  const rgt = [1, 0, 0];
+  const up = [-(f[1] * rgt[2] - f[2] * rgt[1]), -(f[2] * rgt[0] - f[0] * rgt[2]), -(f[0] * rgt[1] - f[1] * rgt[0])]; // rgt × f
+  const focal = 1.3;
+  const proj = (P) => { const d = [P[0] - E[0], P[1] - E[1], P[2] - E[2]]; const zc = d[0] * f[0] + d[1] * f[1] + d[2] * f[2]; if (zc < 0.08) return null; const xc = d[0] * rgt[0] + d[1] * rgt[1] + d[2] * rgt[2]; const yc = d[0] * up[0] + d[1] * up[1] + d[2] * up[2]; return [width / 2 + (xc / zc) * focal * width / 2, height * 0.47 - (yc / zc) * focal * width / 2]; };
+  const S = (az, el, r) => proj(P3(az, el, r));
+  const poly = (pts, attrs) => { const seg = []; let cur = []; for (const q of pts) { if (!q) { if (cur.length) seg.push(cur); cur = []; } else cur.push(`${q[0].toFixed(1)},${q[1].toFixed(1)}`); } if (cur.length) seg.push(cur); return seg.map((s) => `<polyline points="${s.join(' ')}" ${attrs}/>`).join(''); };
+  // 地平線の輪と、高さの輪（30°・60°）、正面の子午線
+  const ring = (el, attrs) => poly(Array.from({ length: 73 }, (_, i) => S(centerAz + i * 5 - 180, el)), attrs);
+  const horizon = ring(0, 'fill="none" stroke="currentColor" stroke-width="1.6"');
+  const rings = ring(30, 'fill="none" stroke="currentColor" stroke-opacity=".22" stroke-dasharray="3 5"') + ring(60, 'fill="none" stroke="currentColor" stroke-opacity=".18" stroke-dasharray="3 5"');
+  const meridian = poly(Array.from({ length: 37 }, (_, i) => S(centerAz, i * 5)).concat(Array.from({ length: 36 }, (_, i) => S(centerAz + 180, 90 - (i + 1) * 5))), 'fill="none" stroke="currentColor" stroke-opacity=".15"');
+  // 地面（地平線の輪の内側）: 輪の多角形を塗る
+  const groundPts = Array.from({ length: 73 }, (_, i) => S(centerAz + i * 5 - 180, 0)).filter(Boolean).map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(' ');
+  // 方角ラベル（地平線の少し外側）
+  const DIRS8 = [['北', 0], ['北東', 45], ['東', 90], ['南東', 135], ['南', 180], ['南西', 225], ['西', 270], ['北西', 315]];
+  let labels = '';
+  for (const [n, az] of DIRS8) { const q = S(az, 0, 1.12); if (!q || q[1] > height - 8) continue; const front = Math.cos((az - centerAz) * D) < 0; labels += `<text x="${q[0].toFixed(1)}" y="${(q[1] + 4).toFixed(1)}" text-anchor="middle" font-size="${front ? 13 : 11}" font-weight="${front ? 700 : 400}" fill="currentColor" fill-opacity="${front ? 1 : .6}">${n}</text>`; }
+  // 高さの目安ラベル（正面の子午線上）
+  let elLabels = '';
+  for (const el of [30, 60]) { const q = S(centerAz + 40, el); if (q) elLabels += `<text x="${(q[0] + 8).toFixed(1)}" y="${(q[1] - 4).toFixed(1)}" font-size="11" fill="currentColor" fill-opacity=".7">${el}°${el === 30 ? '（拳3つ）' : ''}</text>`; }
+  const zen = S(0, 89.9); const Lq = S(pos.az, pos.el); const zenLabel = zen && !(Lq && Math.hypot(Lq[0] - zen[0], Lq[1] - zen[1]) < 60) ? `<text x="${zen[0].toFixed(1)}" y="${(zen[1] - 8).toFixed(1)}" text-anchor="middle" font-size="11" fill="currentColor" fill-opacity=".7">真上</text>` : '';
+  // 軌跡: 通った分は実線、これからは点線＋矢じり
+  const seq = (a, b, n) => Array.from({ length: n + 1 }, (_, i) => { const q = track.at(a + (b - a) * i / n); return S(q.az, q.el); });
+  const donePts = t > 0 ? seq(0, t, 40) : [];
+  const todoPts = t < 1 ? seq(t, 1, 40) : [];
+  const todoStr = todoPts.filter(Boolean).map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`);
+  const done = donePts.length ? poly(donePts, 'fill="none" stroke="#ffd166" stroke-width="3.5" stroke-linecap="round"') : '';
+  const todo = todoPts.length ? poly(todoPts, 'fill="none" stroke="#ffd166" stroke-width="2.5" stroke-dasharray="7 7" opacity=".8"') + arrowsAlong(todoStr, Math.max(1, Math.round(3 * (1 - t))), '#ffd166', 8) : '';
+  // 観測者（原点に立つ、後ろ姿）と、光を指さす腕
+  const H = 0.26; // 人の背の高さ（ドーム半径 1 に対して）
+  const head = proj([0, 0, H]), hip = proj([0, 0, H * 0.45]), shoulder = proj([0, 0, H * 0.8]);
+  const footL = proj([-0.035, 0, 0]), footR = proj([0.035, 0, 0]), foot = proj([0, 0, 0]);
+  const arm = (() => { const P = P3(pos.az, pos.el, 1); const L = H * 0.75; const v = [P[0], P[1], P[2] - H * 0.8]; const n = Math.hypot(...v); return proj([v[0] / n * L, v[1] / n * L, H * 0.8 + v[2] / n * L]); })();
+  const person = head && hip && footL && footR ? `<line x1="${shoulder[0].toFixed(1)}" y1="${shoulder[1].toFixed(1)}" x2="${hip[0].toFixed(1)}" y2="${hip[1].toFixed(1)}" stroke="#e8ecf5" stroke-width="9" stroke-linecap="round"/><line x1="${hip[0].toFixed(1)}" y1="${hip[1].toFixed(1)}" x2="${footL[0].toFixed(1)}" y2="${footL[1].toFixed(1)}" stroke="#e8ecf5" stroke-width="5" stroke-linecap="round"/><line x1="${hip[0].toFixed(1)}" y1="${hip[1].toFixed(1)}" x2="${footR[0].toFixed(1)}" y2="${footR[1].toFixed(1)}" stroke="#e8ecf5" stroke-width="5" stroke-linecap="round"/><circle cx="${head[0].toFixed(1)}" cy="${head[1].toFixed(1)}" r="9" fill="#e8ecf5"/>${arm ? `<line x1="${shoulder[0].toFixed(1)}" y1="${shoulder[1].toFixed(1)}" x2="${arm[0].toFixed(1)}" y2="${arm[1].toFixed(1)}" stroke="#ffd166" stroke-width="4" stroke-linecap="round"/>` : ''}<text x="${(foot[0] + 16).toFixed(1)}" y="${(foot[1] + 6).toFixed(1)}" font-size="12" fill="currentColor">あなた</text>` : '';
+  // 光
+  const L = S(pos.az, pos.el);
+  const startQ = S(p.start.az, p.start.el);
+  const startMark = t > 0.02 && startQ ? `<circle cx="${startQ[0].toFixed(1)}" cy="${startQ[1].toFixed(1)}" r="6" fill="none" stroke="#ffd166" stroke-opacity=".7" stroke-dasharray="3 3"/>` : '';
+  const label = t === 0 ? `ここに現れる ${hhmm(p.start.d)}` : t >= 1 ? `ここで消える ${hhmm(p.end.d)}` : hhmmss(pos.d);
+  const sub = t === 0 ? `${dir16(p.start.az)}・拳${Math.max(1, Math.round(p.start.el / 10))}つ分（${p.start.el.toFixed(0)}°）` : `${dir16(pos.az)}・高さ${pos.el.toFixed(0)}°`;
+  const ly = L ? Math.max(48, L[1] - 20) : 0; // ラベルは光の上。上端からはみ出さない
+  const light = L ? `<circle cx="${L[0].toFixed(1)}" cy="${L[1].toFixed(1)}" r="24" fill="url(#dmGlow)"/><circle cx="${L[0].toFixed(1)}" cy="${L[1].toFixed(1)}" r="5" fill="#fff"/><text x="${L[0].toFixed(1)}" y="${(ly - 18).toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="#ffd166" stroke="#0b1230" stroke-width="3" paint-order="stroke">${label}</text><text x="${L[0].toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="12" fill="currentColor" stroke="#0b1230" stroke-width="3" paint-order="stroke">${sub}</text>` : '';
+  // 星
+  let stars = '';
+  for (let i = 0; i < 26; i++) { const q = S((i * 47) % 360, 8 + (i * 29) % 70); if (q) stars += `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${1 + (i % 3) * 0.4}" fill="#fff" opacity=".6"/>`; }
+  const turn = ((p.start.az - centerAz + 540) % 360) - 180;
+  const headTxt = Math.abs(turn) < 3 ? `${dir16(centerAz)} を向いて立つ。空を、あなたの後ろ斜め上から見た図` : `顔を${turn < 0 ? '右' : '左'}へ ${Math.abs(turn).toFixed(0)}° 回して追いかける（いま ${dir16(centerAz)} を向いている）`;
+  return `<svg viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="あなたと空のドームを後ろ斜め上から見た図">
+<defs><radialGradient id="dmGlow"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#ffe9a8" stop-opacity=".9"/><stop offset="1" stop-color="#ffd166" stop-opacity="0"/></radialGradient>
+<linearGradient id="dmSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070f2a"/><stop offset="1" stop-color="#1c2c58"/></linearGradient></defs>
+<rect x="0" y="0" width="${width}" height="${height}" fill="url(#dmSky)" rx="8"/>
+${stars}
+<polygon points="${groundPts}" fill="#182233" fill-opacity=".95"/>
+${rings}${meridian}${horizon}${labels}${elLabels}${zenLabel}
+${todo}${done}${startMark}
+${person}
+${light}
+<text x="16" y="22" font-size="12" fill="currentColor" fill-opacity=".85">${headTxt}</text>
+</svg>`;
+}

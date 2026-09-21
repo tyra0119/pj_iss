@@ -1,15 +1,15 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=42d858d-1748';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=42d858d-1748';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=42d858d-1748';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=42d858d-1748';
-import { loadTransit } from './lib/transit.mjs?v=42d858d-1748';
-import { packingList } from './lib/packing.mjs?v=42d858d-1748';
-import { randomTrivia } from './lib/trivia.mjs?v=42d858d-1748';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=42d858d-1748';
-import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=42d858d-1748';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=42d858d-1748';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=42d858d-1748';
-import { fetchWarnings } from './jma.mjs?v=42d858d-1748';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=b296de9-1804';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=b296de9-1804';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=b296de9-1804';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=b296de9-1804';
+import { loadTransit } from './lib/transit.mjs?v=b296de9-1804';
+import { packingList } from './lib/packing.mjs?v=b296de9-1804';
+import { randomTrivia } from './lib/trivia.mjs?v=b296de9-1804';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, domeViewSvg, passTrack } from './illustrations.mjs?v=b296de9-1804';
+import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=b296de9-1804';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=b296de9-1804';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=b296de9-1804';
+import { fetchWarnings } from './jma.mjs?v=b296de9-1804';
 
 const DAYS = 60;
 const TZ = 9;
@@ -86,7 +86,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=42d858d-1748');
+  const res = await fetch('./data/iss.tle?v=b296de9-1804');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -218,14 +218,14 @@ async function renderHeadline(dateKey, plan, now) {
 
 // ---------- 自分視点のアニメーション ----------
 // 実際の 2〜6 分を 10 秒で再生。顔の向き（画面の中心）は光をゆっくり追いかける
-const fp = { raf: null, t: 0, playing: false, pass: null, center: 0 };
+const fp = { raf: null, t: 0, playing: false, pass: null, center: 0, mode: store.get('fpMode', 'dome') };
 function fpDraw(t) {
   const r = fp.pass;
   const pos = passTrack(r).at(t);
   // 顔の向き: 光の方角を少し遅れて追いかける（1 コマで差の 12% ずつ）
   const rel = ((pos.az - fp.center + 540) % 360) - 180;
   fp.center = (fp.center + rel * 0.12 + 360) % 360;
-  $('#firstPerson').innerHTML = firstPersonSvg(r, { t, centerAz: fp.center });
+  $('#firstPerson').innerHTML = (fp.mode === 'front' ? firstPersonSvg : domeViewSvg)(r, { t, centerAz: fp.center });
   $('#fpSeek').value = String(Math.round(t * 1000));
   const d = new Date(r.start.d.getTime() + t * (r.end.d - r.start.d));
   $('#fpTime').textContent = `${new Date(d.getTime() + 9 * 3600e3).toISOString().slice(11, 19)}（出現から ${Math.round(t * (r.end.d - r.start.d) / 1000)} 秒）`;
@@ -262,6 +262,10 @@ async function drawOrbit() {
 }
 $('#orbitDetails').addEventListener('toggle', () => { if ($('#orbitDetails').open) drawOrbit().catch(console.error); });
 $('#fpPlay').addEventListener('click', () => { if (fp.playing) fpStop(); else fpPlay(); });
+document.querySelectorAll('button[data-fpmode]').forEach((b) => {
+  b.setAttribute('aria-pressed', String(b.dataset.fpmode === fp.mode));
+  b.addEventListener('click', () => { fp.mode = b.dataset.fpmode; store.set('fpMode', fp.mode); document.querySelectorAll('button[data-fpmode]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); if (fp.pass) fpDraw(fp.t); });
+});
 $('#fpSeek').addEventListener('input', (e) => {
   // つまみで飛んだときも、そこまで顔を追いかけてきた向きになるよう 0 から追従し直す
   fpStop(); fp.t = Number(e.target.value) / 1000; fp.center = fp.pass.start.az;
@@ -1034,8 +1038,8 @@ async function init() {
   setProposalsLoading('軌道データと鉄道・バスのデータを読み込んでいます');
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=42d858d-1748').then((r) => r.json()),
-    fetch('./data/stations.json?v=42d858d-1748').then((r) => r.json()),
+    fetch('./data/sites.json?v=b296de9-1804').then((r) => r.json()),
+    fetch('./data/stations.json?v=b296de9-1804').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
