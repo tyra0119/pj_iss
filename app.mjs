@@ -1,15 +1,15 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=657787f-1711';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=657787f-1711';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=657787f-1711';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=657787f-1711';
-import { loadTransit } from './lib/transit.mjs?v=657787f-1711';
-import { packingList } from './lib/packing.mjs?v=657787f-1711';
-import { randomTrivia } from './lib/trivia.mjs?v=657787f-1711';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=657787f-1711';
-import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=657787f-1711';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=657787f-1711';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=657787f-1711';
-import { fetchWarnings } from './jma.mjs?v=657787f-1711';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=c6c5f39-1721';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=c6c5f39-1721';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=c6c5f39-1721';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=c6c5f39-1721';
+import { loadTransit } from './lib/transit.mjs?v=c6c5f39-1721';
+import { packingList } from './lib/packing.mjs?v=c6c5f39-1721';
+import { randomTrivia } from './lib/trivia.mjs?v=c6c5f39-1721';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=c6c5f39-1721';
+import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=c6c5f39-1721';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=c6c5f39-1721';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=c6c5f39-1721';
+import { fetchWarnings } from './jma.mjs?v=c6c5f39-1721';
 
 const DAYS = 60;
 const TZ = 9;
@@ -86,7 +86,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=657787f-1711');
+  const res = await fetch('./data/iss.tle?v=c6c5f39-1721');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -696,7 +696,7 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
       timeline = `<table class="timeline"><tbody>
         <tr><th>出発</th><td><strong class="${tooLate ? 'ng' : 'acc'}" id="departBy">${fmtMin(departBy)} まで</strong>に${esc(state.from.name)}を出る ${estNote}<div id="goTrain" class="muted small">乗る列車を時刻表から探しています…</div>${manyTransfers}${goLegs}<div class="small">${gmapsLink(state.from, best.site, 'Google マップで行きの経路を見る')}</div></td></tr>
         <tr><th>到着</th><td><strong>${fmtMin(arriveBy)}</strong> までに現地へ。方角を合わせて待つ（下の地図とコンパス）</td></tr>
-        <tr><th>観測</th><td><strong>${fmtMin(obsStart)}〜${fmtMin(obsEnd)}</strong>（約${Math.max(1, Math.round((obsEnd - obsStart)))}分）</td></tr>
+        <tr class="obs-row"><th>観測</th><td><div class="obs-big">${fmtMin(obsStart)}〜${fmtMin(obsEnd)}<span class="obs-len">（約${Math.max(1, Math.round((obsEnd - obsStart)))}分）</span></div><div class="obs-sub">${dir16(p.start.az)}の空、拳${Math.max(1, Math.round(p.start.el / 10))}つ分の高さに現れ、${dir16(p.peak.az)}で最も高く${p.peak.el.toFixed(0)}°、${dir16(p.end.az)}で消える。明るさ約${p.mag.toFixed(1)}等</div></td></tr>
         <tr><th>帰り</th><td>${fmtMin(leaveSite)} ごろ現地を出る<div id="backTrain"></div>${backLegs}<div class="small">${gmapsLinkBack(best.site, state.from, 'Google マップで帰りの経路を見る')}</div>${backFL ? `<div class="${lastOk === false ? 'ng' : 'small'}">${esc(backFL.station)}駅 ${esc(backFL.railway)}${backFL.toward ? `（${esc(backFL.toward)}方面）` : ''}の<strong>最終電車 ${fmtMin(backFL.last)}</strong>${holiday ? '（土休日ダイヤ）' : '（平日ダイヤ）'}${lastOk === false ? '。観測後では間に合いません。別の候補地を選んでください' : ''}</div>` : '<div class="muted small">帰りの最終電車の時刻は取得できませんでした</div>'}</td></tr>
         <tr><th>帰宅</th><td><strong id="returnBy">${fmtMin(returnBy)}</strong> ごろ${esc(state.from.name)}に戻る<span class="muted small" id="returnNote">（出発から帰宅まで 約${Math.floor((returnBy - departBy) / 60)}時間${(returnBy - departBy) % 60}分）</span></td></tr>
       </tbody></table>`
@@ -712,7 +712,7 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
       <table class="timeline"><tbody>
         <tr><th>前夜</th><td>${goFL ? `<strong>${fmtMin(lastGo)}</strong> ${esc(goFL.station)}駅 ${esc(goFL.railway)}${goFL.toward ? `（${esc(goFL.toward)}方面）` : ''}の最終電車に乗る${holiday ? '（土休日ダイヤ）' : '（平日ダイヤ）'}。もっと早い電車でも構いません` : '終電の時刻を取得できませんでした'} ${estNote}${goLegs}<div class="small">${gmapsLink(state.from, best.site, 'Google マップで行きの経路を見る')}</div></td></tr>
         <tr><th>到着</th><td>${arriveNight != null ? `<strong>${fmtMin(arriveNight)}</strong> ごろ現地。観測まで約${Math.floor(waitMin / 60)}時間${waitMin % 60}分の待機` : '—'}</td></tr>
-        <tr><th>観測</th><td><strong>${fmtMin(obsStart)}〜${fmtMin(obsEnd)}</strong>（約${Math.max(1, Math.round((obsEnd - obsStart)))}分）</td></tr>
+        <tr class="obs-row"><th>観測</th><td><div class="obs-big">${fmtMin(obsStart)}〜${fmtMin(obsEnd)}<span class="obs-len">（約${Math.max(1, Math.round((obsEnd - obsStart)))}分）</span></div><div class="obs-sub">${dir16(p.start.az)}の空、拳${Math.max(1, Math.round(p.start.el / 10))}つ分の高さに現れ、${dir16(p.peak.az)}で最も高く${p.peak.el.toFixed(0)}°、${dir16(p.end.az)}で消える。明るさ約${p.mag.toFixed(1)}等</div></td></tr>
         <tr><th>始発</th><td>${backFL ? `${esc(backFL.station)}駅 ${esc(backFL.railway)}${backFL.toward ? `（${esc(backFL.toward)}方面）` : ''}の<strong>始発 ${fmtMin(firstBack)}</strong>${isHoliday(localDate(p.peak.d)) ? '（土休日ダイヤ）' : '（平日ダイヤ）'}` : '始発の時刻を取得できませんでした'}${backLegs}</td></tr>
         <tr><th>帰宅</th><td>${returnBy != null ? `<strong>${fmtMin(returnBy)}</strong> ごろ${esc(state.from.name)}に戻る` : '—'}</td></tr>
       </tbody></table>`;
@@ -732,7 +732,7 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
     timeline = `<p class="muted small">上の「出発駅」を選ぶと、乗る電車・出発時刻・帰りの最終電車を出します。</p>
       <table class="timeline"><tbody>
       <tr><th>到着</th><td><strong>${fmtMin(arriveBy)}</strong> までに${esc(best.site.name)}へ（${esc(best.site.station)}駅 徒歩${best.site.walkMin}分）</td></tr>
-      <tr><th>観測</th><td><strong>${fmtMin(obsStart)}〜${fmtMin(obsEnd)}</strong></td></tr>
+      <tr class="obs-row"><th>観測</th><td><div class="obs-big">${fmtMin(obsStart)}〜${fmtMin(obsEnd)}</div><div class="obs-sub">${dir16(p.start.az)}の空、拳${Math.max(1, Math.round(p.start.el / 10))}つ分の高さに現れ、${dir16(p.peak.az)}で最も高く${p.peak.el.toFixed(0)}°、${dir16(p.end.az)}で消える</div></td></tr>
       </tbody></table>`;
     packing = packingList({ tempC: best.w.available ? best.w.obs.temp : null, precipProb: 0, precip: 0, wind: 0, overnight, siteType: best.site.type, date: p.peak.d });
   }
@@ -1006,8 +1006,8 @@ async function init() {
   $('#status').textContent = '軌道データを取得中…';
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=657787f-1711').then((r) => r.json()),
-    fetch('./data/stations.json?v=657787f-1711').then((r) => r.json()),
+    fetch('./data/sites.json?v=c6c5f39-1721').then((r) => r.json()),
+    fetch('./data/stations.json?v=c6c5f39-1721').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
