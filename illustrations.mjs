@@ -101,7 +101,11 @@ export function observationSceneSvg(p, width = 720, height = 300) {
   const pts = [p.start, p.peak, p.end];
   // 3点を通る滑らかな曲線（二次ベジェ2本）
   const trk = passTrack(p);
-  const path = Array.from({ length: 41 }, (_, i) => { const q = trk.at(i / 40); return `${i ? 'L' : 'M'}${x(q.az).toFixed(1)},${y(q.el).toFixed(1)}`; }).join(' ');
+  const samples = Array.from({ length: 41 }, (_, i) => { const q = trk.at(i / 40); return `${x(q.az).toFixed(1)},${y(q.el).toFixed(1)}`; });
+  const path = samples.map((s, i) => `${i ? 'L' : 'M'}${s}`).join(' ');
+  const arrows = arrowsAlong(samples, 4, '#ffd166', 8);
+  const q1 = trk.at(0.12);
+  const dirLabel = `<text x="${x(q1.az).toFixed(1)}" y="${(y(q1.el) + 18).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#ffd166">進む向き →</text>`;
   const dirs = [];
   for (let d = -half; d <= half; d += 30) {
     const az = (centerAz + d + 360) % 360;
@@ -128,7 +132,7 @@ export function observationSceneSvg(p, width = 720, height = 300) {
 ${fists}
 ${sky.join('')}
 <line x1="30" x2="${width - 30}" y1="${horizonY}" y2="${horizonY}" stroke="currentColor" stroke-width="1.5"/>
-<path d="${path}" fill="none" stroke="${ACC}" stroke-width="3" stroke-dasharray="8 6"/>
+<path d="${path}" fill="none" stroke="${ACC}" stroke-width="3" stroke-dasharray="8 6"/>${arrows}${dirLabel}
 ${dot(p.start, `① 出現 ${hhmm(p.start.d)}`)}${dot(p.peak, `② 最高 ${hhmm(p.peak.d)}・${p.peak.el.toFixed(0)}°`, -12)}${dot(p.end, `③ 消失 ${hhmm(p.end.d)}`, Math.abs(x(p.end.az) - x(p.peak.az)) < 70 && Math.abs(y(p.end.el) - y(p.peak.el)) < 30 ? 22 : -10)}
 <!-- 人（背中側から） -->
 <circle cx="${px}" cy="${horizonY - 6}" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -153,6 +157,20 @@ const hhmmss = (d) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(11,
  * 「最高点の方向・距離」と「出現の方向・時刻」から速度と進行方向を決めて、任意の時刻の方角・高さを出す。
  * 空の上では戻らず、ほぼ大円に沿って進む。t は 0（出現）..1（消失）
  */
+// 点列（"x,y" の並び）に沿って、進む向きの矢じりを n 個置く
+export function arrowsAlong(points, n = 3, color = '#ffd166', size = 9) {
+  const pts = points.map((s) => s.split(',').map(Number));
+  if (pts.length < 3) return '';
+  let out = '';
+  for (let k = 1; k <= n; k++) {
+    const i = Math.min(pts.length - 2, Math.max(1, Math.round((pts.length - 1) * k / (n + 1))));
+    const [x, y] = pts[i]; const [x2, y2] = pts[i + 1];
+    const ang = Math.atan2(y2 - y, x2 - x) * 180 / Math.PI;
+    out += `<polygon points="${size},0 ${-size * 0.7},${size * 0.6} ${-size * 0.7},${-size * 0.6}" fill="${color}" transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${ang.toFixed(1)})"/>`;
+  }
+  return out;
+}
+
 export function passTrack(p) {
   const D = Math.PI / 180;
   const unit = (az, el) => [Math.cos(el * D) * Math.sin(az * D), Math.cos(el * D) * Math.cos(az * D), Math.sin(el * D)]; // 東, 北, 上
@@ -232,7 +250,8 @@ export function firstPersonSvg(p, opts = {}, width = 720, height = 420) {
   // 軌跡: 通った分は実線、これから通る分は点線
   const pts = (from, to, n) => { const a = []; for (let i = 0; i <= n; i++) { const q = track.at(from + (to - from) * (i / n)); a.push(`${x(q.az).toFixed(1)},${y(q.el).toFixed(1)}`); } return a.join(' '); };
   const done = t > 0 ? `<polyline points="${pts(0, t, 40)}" fill="none" stroke="#ffd166" stroke-width="3" opacity=".9"/>` : '';
-  const todo = t < 1 ? `<polyline points="${pts(t, 1, 40)}" fill="none" stroke="#ffd166" stroke-width="2.5" stroke-dasharray="7 7" opacity=".75"/>` : '';
+  const todoPts = pts(t, 1, 40).split(' ');
+  const todo = t < 1 ? `<polyline points="${todoPts.join(' ')}" fill="none" stroke="#ffd166" stroke-width="2.5" stroke-dasharray="7 7" opacity=".75"/>${arrowsAlong(todoPts, Math.max(1, Math.round(3 * (1 - t))), '#ffd166', 8)}` : '';
   const sx = x(pos.az), sy = y(pos.el);
   const startMark = t > 0.02 ? `<circle cx="${x(p.start.az).toFixed(1)}" cy="${y(p.start.el).toFixed(1)}" r="7" fill="none" stroke="#ffd166" stroke-opacity=".7" stroke-dasharray="3 3"/>` : '';
   const label = t === 0 ? `ここに現れる ${hhmm(p.start.d)}` : t >= 1 ? `ここで消える ${hhmm(p.end.d)}` : `${hhmmss(pos.d)}`;

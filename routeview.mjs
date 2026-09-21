@@ -1,6 +1,6 @@
 // 経路を縦のタイムラインで描く（遅延レーダーの「目的地への行き方」と同じ見た目）
 // 駅・バス停のドット、路線色の縦線、区間ごとの説明と運行状態のバッジ
-import { LINE_COLORS, OPERATOR_COLORS } from './linecolors.mjs?v=7f2ff67-1739';
+import { LINE_COLORS, OPERATOR_COLORS } from './linecolors.mjs?v=42d858d-1748';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmt = (m) => { if (m == null || !Number.isFinite(m)) return ''; const h = Math.floor(m / 60), mm = String(Math.round(m % 60)).padStart(2, '0'); return h >= 24 ? `翌${h - 24}:${mm}` : `${h}:${mm}`; };

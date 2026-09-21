@@ -1,15 +1,15 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=7f2ff67-1739';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=7f2ff67-1739';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=7f2ff67-1739';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=7f2ff67-1739';
-import { loadTransit } from './lib/transit.mjs?v=7f2ff67-1739';
-import { packingList } from './lib/packing.mjs?v=7f2ff67-1739';
-import { randomTrivia } from './lib/trivia.mjs?v=7f2ff67-1739';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=7f2ff67-1739';
-import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=7f2ff67-1739';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=7f2ff67-1739';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=7f2ff67-1739';
-import { fetchWarnings } from './jma.mjs?v=7f2ff67-1739';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=42d858d-1748';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=42d858d-1748';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=42d858d-1748';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=42d858d-1748';
+import { loadTransit } from './lib/transit.mjs?v=42d858d-1748';
+import { packingList } from './lib/packing.mjs?v=42d858d-1748';
+import { randomTrivia } from './lib/trivia.mjs?v=42d858d-1748';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=42d858d-1748';
+import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=42d858d-1748';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=42d858d-1748';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=42d858d-1748';
+import { fetchWarnings } from './jma.mjs?v=42d858d-1748';
 
 const DAYS = 60;
 const TZ = 9;
@@ -86,7 +86,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=7f2ff67-1739');
+  const res = await fetch('./data/iss.tle?v=42d858d-1748');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -1034,8 +1034,8 @@ async function init() {
   setProposalsLoading('軌道データと鉄道・バスのデータを読み込んでいます');
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=7f2ff67-1739').then((r) => r.json()),
-    fetch('./data/stations.json?v=7f2ff67-1739').then((r) => r.json()),
+    fetch('./data/sites.json?v=42d858d-1748').then((r) => r.json()),
+    fetch('./data/stations.json?v=42d858d-1748').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
