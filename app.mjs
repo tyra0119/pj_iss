@@ -1,15 +1,15 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=c437ff3-1736';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=c437ff3-1736';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=c437ff3-1736';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=c437ff3-1736';
-import { loadTransit } from './lib/transit.mjs?v=c437ff3-1736';
-import { packingList } from './lib/packing.mjs?v=c437ff3-1736';
-import { randomTrivia } from './lib/trivia.mjs?v=c437ff3-1736';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=c437ff3-1736';
-import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=c437ff3-1736';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=c437ff3-1736';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=c437ff3-1736';
-import { fetchWarnings } from './jma.mjs?v=c437ff3-1736';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=7f2ff67-1739';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=7f2ff67-1739';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=7f2ff67-1739';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=7f2ff67-1739';
+import { loadTransit } from './lib/transit.mjs?v=7f2ff67-1739';
+import { packingList } from './lib/packing.mjs?v=7f2ff67-1739';
+import { randomTrivia } from './lib/trivia.mjs?v=7f2ff67-1739';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=7f2ff67-1739';
+import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=7f2ff67-1739';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=7f2ff67-1739';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=7f2ff67-1739';
+import { fetchWarnings } from './jma.mjs?v=7f2ff67-1739';
 
 const DAYS = 60;
 const TZ = 9;
@@ -86,7 +86,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=c437ff3-1736');
+  const res = await fetch('./data/iss.tle?v=7f2ff67-1739');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -282,7 +282,7 @@ async function selectPass(r, kind = 'evening') {
   $('#sitesCard').hidden = false;
   $('#recoCard').hidden = false;
   $('#reco').innerHTML = '<p class="muted">候補地と天気と経路を調べています…</p>';
-  $('#sitesNote').innerHTML = '<span class="spinner"></span>候補地ごとの見え方を計算中…';
+  $('#sitesNote').innerHTML = `${ISS_SPIN}候補地ごとの見え方を計算中…`; $('#sitesNote').classList.add('loading');
   await yieldToBrowser();
   $('#sitesList').replaceChildren();
   $('#goBest').hidden = true;
@@ -296,12 +296,13 @@ async function selectPass(r, kind = 'evening') {
     $('#sitesNote').textContent = `天気予報は${FORECAST_DAYS}日先までです。この日は予報がまだ無いので、雲を見ずに候補地を並べています。近づいたらもう一度調べてください。`;
     entries = state.sites.map((s) => ({ site: s, w: { available: false }, pass: sitePass(s, r) }));
   } else {
-    $('#sitesNote').innerHTML = '<span class="spinner"></span>天気を取得中…';
+    $('#sitesNote').innerHTML = `${ISS_SPIN}天気を取得中…`;
     try {
       const hourly = await hourlyAll();
       entries = state.sites.map((s, i) => ({ site: s, w: assessSite(hourly[i], r.peak.d), pass: sitePass(s, r) }));
       withWeather = true;
       const okCount = entries.filter((e) => e.w.available && e.w.observable).length;
+      $('#sitesNote').classList.remove('loading');
       $('#sitesNote').textContent = okCount
         ? `観測時刻（${hhmm(r.peak.d)}）の予報で、低い雲と中間の雲の合計が20%以下の場所を「晴れ」としています。${okCount}か所が晴れの見込みです。`
         : (entries.some((e) => e.w.available && e.w.unstable) ? '観測時刻の予報では、雲が少ない候補地はありますが、いずれも前後に雨の心配があります（「雨の心配」の印）。前日と当日にもう一度調べてください。' : '観測時刻の予報では、どの候補地も雲が多い見込みです。前日と当日にもう一度調べてください。');
@@ -322,9 +323,9 @@ async function selectPass(r, kind = 'evening') {
   }
   // 出発地からの経路と所要
   const noteAfterWeather = $('#sitesNote').innerHTML;
-  if (state.from) { $('#sitesNote').innerHTML = '<span class="spinner"></span>電車とバスの経路を計算中…'; await yieldToBrowser(); }
+  if (state.from) { $('#sitesNote').innerHTML = `${ISS_SPIN}電車とバスの経路を計算中…`; await yieldToBrowser(); }
   for (const e of entries) e.travel = state.from ? computeTravel(e.site) : null;
-  $('#sitesNote').innerHTML = noteAfterWeather; // 経路の計算が終わったら天気の説明に戻す
+  $('#sitesNote').innerHTML = noteAfterWeather; $('#sitesNote').classList.remove('loading'); // 経路の計算が終わったら天気の説明に戻す
   // 並べ替え: 晴れ > 雲量 > 所要時間 > 徒歩
   const score = (e) => {
     if (!e.pass) return 1e9;
@@ -921,7 +922,7 @@ async function runPlan() {
     readFrom();
     enableScreen(2);
     showScreen(2);
-    $('#headline').innerHTML = '<span class="spinner"></span>計算中…';
+    $('#headline').innerHTML = `${ISS_SPIN}計算中…`;
     $('#headlineDetail').textContent = 'ISS の通過、天気、経路を順に調べています。数秒かかります。';
     $('#passPick').replaceChildren();
     $('#sitesCard').hidden = true;
@@ -1033,8 +1034,8 @@ async function init() {
   setProposalsLoading('軌道データと鉄道・バスのデータを読み込んでいます');
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=c437ff3-1736').then((r) => r.json()),
-    fetch('./data/stations.json?v=c437ff3-1736').then((r) => r.json()),
+    fetch('./data/sites.json?v=7f2ff67-1739').then((r) => r.json()),
+    fetch('./data/stations.json?v=7f2ff67-1739').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
