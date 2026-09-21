@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="build" content="8a6ade9-1731">
+<meta charset="utf-8"><meta name="build" content="dbc5603-1736">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>そうだ。ISSを見に行こう！</title>
 <meta name="description" content="首都圏で ISS（国際宇宙ステーション）が肉眼ではっきり見える日と場所を提案し、電車での行き方と帰りの終電まで計画します。">
@@ -41,7 +41,15 @@
   .hero-card{border-color:var(--accent);background:linear-gradient(180deg,#1a2347,#141b33)}
   .hero-h{font-size:1.3rem;color:var(--accent);margin:0 0 6px}
   .hero-note{font-size:1rem;margin:0 0 12px}
-  .hero-note.loading{font-size:1.15rem;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:10px}
+  .progress{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px}
+  .progress li{display:flex;align-items:center;gap:10px;font-size:1.05rem;color:var(--muted)}
+  .progress li.current{color:var(--accent);font-weight:700;font-size:1.15rem}
+  .progress li.done{color:var(--fg)}
+  .progress li .mark{flex:0 0 28px;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--ok);font-weight:800}
+  .iss-spin{display:inline-block;width:28px;height:28px;vertical-align:middle}
+  .iss-spin svg{width:100%;height:100%;overflow:visible}
+  .iss-spin .orb{transform-origin:20px 20px;animation:orbit 1.8s linear infinite}
+  @keyframes orbit{to{transform:rotate(360deg)}}
   .spinner.big{width:22px;height:22px;border-width:3px;margin:0}
   .proposal.skeleton{height:96px;background:linear-gradient(90deg,#0f1630 25%,#1a2347 50%,#0f1630 75%);background-size:200% 100%;animation:shimmer 1.4s linear infinite;border-color:var(--line);pointer-events:none}
   @keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
@@ -147,7 +155,8 @@
   <section id="screen1" class="screen">
     <div class="card hero-card">
       <h2 class="hero-h">見える日の提案</h2>
-      <p id="proposalsNote" class="hero-note loading"><span class="spinner big"></span>軌道データを取得しています…</p>
+      <ul id="progress" class="progress"></ul>
+      <p id="proposalsNote" class="hero-note" hidden></p>
       <div id="proposals" class="proposals"><div class="proposal skeleton"></div><div class="proposal skeleton"></div><div class="proposal skeleton"></div></div>
       <p class="muted small" style="margin-top:12px">見える日は2〜4日続けて来て、そのあと数週間は見えません。表示するのは「最大の高さ30°以上・明るさ−1等より明るい・空が十分暗い」通過だけです。</p>
     </div>
@@ -285,6 +294,6 @@
     <div>ODPTチャレンジ2026向けに開発中。</div>
   </footer>
 </main>
-<script type="module" src="./app.mjs?v=8a6ade9-1731"></script>
+<script type="module" src="./app.mjs?v=dbc5603-1736"></script>
 </body>
 </html>
