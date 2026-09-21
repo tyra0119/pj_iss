@@ -1,15 +1,15 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=c6c5f39-1721';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=c6c5f39-1721';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=c6c5f39-1721';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=c6c5f39-1721';
-import { loadTransit } from './lib/transit.mjs?v=c6c5f39-1721';
-import { packingList } from './lib/packing.mjs?v=c6c5f39-1721';
-import { randomTrivia } from './lib/trivia.mjs?v=c6c5f39-1721';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=c6c5f39-1721';
-import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=c6c5f39-1721';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=c6c5f39-1721';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=c6c5f39-1721';
-import { fetchWarnings } from './jma.mjs?v=c6c5f39-1721';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=8a6ade9-1731';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=8a6ade9-1731';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=8a6ade9-1731';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=8a6ade9-1731';
+import { loadTransit } from './lib/transit.mjs?v=8a6ade9-1731';
+import { packingList } from './lib/packing.mjs?v=8a6ade9-1731';
+import { randomTrivia } from './lib/trivia.mjs?v=8a6ade9-1731';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, passTrack } from './illustrations.mjs?v=8a6ade9-1731';
+import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=8a6ade9-1731';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=8a6ade9-1731';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=8a6ade9-1731';
+import { fetchWarnings } from './jma.mjs?v=8a6ade9-1731';
 
 const DAYS = 60;
 const TZ = 9;
@@ -86,7 +86,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=c6c5f39-1721');
+  const res = await fetch('./data/iss.tle?v=8a6ade9-1731');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -950,8 +950,12 @@ async function hourlyAll() {
   hourlyCache = { at: Date.now(), data };
   return data;
 }
+const setProposalsLoading = (msg) => { const n = $('#proposalsNote'); n.className = 'hero-note loading'; n.innerHTML = `<span class="spinner big"></span>${esc(msg)}`; };
 async function renderProposals() {
   const now = new Date();
+  setProposalsLoading('天気を確かめて、おすすめの場所を探しています…');
+  if (!$('#proposals .proposal:not(.skeleton)')) { /* 初回は仮カードのまま */ } else { $('#proposals').classList.add('busy'); }
+  await yieldToBrowser();
   const ev = state.rows.filter((r) => r.slot === 'evening' && r.visEnd > now);
   const mo = state.rows.filter((r) => r.slot === 'morning' && r.visEnd > now);
   let hourly = null;
@@ -987,9 +991,11 @@ async function renderProposals() {
     return b;
   };
   const box = $('#proposals');
+  box.classList.remove('busy');
   box.replaceChildren(...ev.map((r) => item(r, 'evening')));
   $('#morningProposals').replaceChildren(...mo.map((r) => item(r, 'morning')));
   const w = windowOf(ev);
+  $('#proposalsNote').className = 'hero-note';
   $('#proposalsNote').innerHTML = ev.length
     ? `これから60日で、夕方に見える日は <strong>${new Set(ev.map((r) => r.night)).size}日</strong>。いちばん近いのは <strong>${md(w.from)}${w.count > 1 ? `〜${md(w.to)}` : ''}</strong>。日を押すと、観測場所を選べます。`
     : '60日以内に夕方に見える日はありません。';
@@ -1004,10 +1010,11 @@ async function init() {
   dateInput.value = localDate(now);
   dateInput.min = localDate(now);
   $('#status').textContent = '軌道データを取得中…';
+  setProposalsLoading('軌道データと鉄道・バスのデータを読み込んでいます…');
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=c6c5f39-1721').then((r) => r.json()),
-    fetch('./data/stations.json?v=c6c5f39-1721').then((r) => r.json()),
+    fetch('./data/sites.json?v=8a6ade9-1731').then((r) => r.json()),
+    fetch('./data/stations.json?v=8a6ade9-1731').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
@@ -1073,6 +1080,8 @@ async function init() {
   const ep = tleEpoch(state.satrec);
   $('#tleInfo').textContent = `軌道データ: ${source}。基準時刻 ${jst(ep).toISOString().replace('T', ' ').slice(0, 16)}。基準時刻から日が離れるほど、予測時刻が数分ずれます。`
     + (transit ? ` 鉄道の経路と始発・終電は公共交通オープンデータセンター（ODPT）の路線・駅・時刻表データ（${transit.data.generated.slice(0, 10)} 取得）から計算。` : ' 鉄道データを読み込めなかったため、所要時間は距離からの概算です。');
+  setProposalsLoading('60日分の通過を計算しています…');
+  await yieldToBrowser();
   const obs = observer(CENTER.lat, CENTER.lon);
   state.rows = computeRows(obs, new Date(now.getTime() - 20 * 60e3), new Date(now.getTime() + DAYS * 86400e3));
   renderLists(state.rows);

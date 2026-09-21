@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="build" content="c6c5f39-1721">
+<meta charset="utf-8"><meta name="build" content="8a6ade9-1731">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>そうだ。ISSを見に行こう！</title>
 <meta name="description" content="首都圏で ISS（国際宇宙ステーション）が肉眼ではっきり見える日と場所を提案し、電車での行き方と帰りの終電まで計画します。">
@@ -41,6 +41,10 @@
   .hero-card{border-color:var(--accent);background:linear-gradient(180deg,#1a2347,#141b33)}
   .hero-h{font-size:1.3rem;color:var(--accent);margin:0 0 6px}
   .hero-note{font-size:1rem;margin:0 0 12px}
+  .hero-note.loading{font-size:1.15rem;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:10px}
+  .spinner.big{width:22px;height:22px;border-width:3px;margin:0}
+  .proposal.skeleton{height:96px;background:linear-gradient(90deg,#0f1630 25%,#1a2347 50%,#0f1630 75%);background-size:200% 100%;animation:shimmer 1.4s linear infinite;border-color:var(--line);pointer-events:none}
+  @keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
   .proposals{display:grid;gap:12px;margin:0}
   .proposal{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:#0f1630;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
   .proposal:hover{border-color:var(--accent)}
@@ -143,8 +147,8 @@
   <section id="screen1" class="screen">
     <div class="card hero-card">
       <h2 class="hero-h">見える日の提案</h2>
-      <p id="proposalsNote" class="hero-note">計算中…</p>
-      <div id="proposals" class="proposals"></div>
+      <p id="proposalsNote" class="hero-note loading"><span class="spinner big"></span>軌道データを取得しています…</p>
+      <div id="proposals" class="proposals"><div class="proposal skeleton"></div><div class="proposal skeleton"></div><div class="proposal skeleton"></div></div>
       <p class="muted small" style="margin-top:12px">見える日は2〜4日続けて来て、そのあと数週間は見えません。表示するのは「最大の高さ30°以上・明るさ−1等より明るい・空が十分暗い」通過だけです。</p>
     </div>
 
@@ -281,6 +285,6 @@
     <div>ODPTチャレンジ2026向けに開発中。</div>
   </footer>
 </main>
-<script type="module" src="./app.mjs?v=c6c5f39-1721"></script>
+<script type="module" src="./app.mjs?v=8a6ade9-1731"></script>
 </body>
 </html>
