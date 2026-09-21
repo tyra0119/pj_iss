@@ -1,5 +1,5 @@
 // 現地でどっちを向くか: 地図に矢印（センサー不要）＋ スマホのコンパス（DeviceOrientation）
-import { dir16 } from './lib/describe.mjs?v=b250c5b-2113';
+import { dir16 } from './lib/describe.mjs?v=657787f-1711';
 
 const ACC = '#ffd166';
 
