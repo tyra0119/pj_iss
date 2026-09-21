@@ -1,15 +1,16 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=b296de9-1804';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=b296de9-1804';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=b296de9-1804';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=b296de9-1804';
-import { loadTransit } from './lib/transit.mjs?v=b296de9-1804';
-import { packingList } from './lib/packing.mjs?v=b296de9-1804';
-import { randomTrivia } from './lib/trivia.mjs?v=b296de9-1804';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, domeViewSvg, passTrack } from './illustrations.mjs?v=b296de9-1804';
-import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=b296de9-1804';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=b296de9-1804';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=b296de9-1804';
-import { fetchWarnings } from './jma.mjs?v=b296de9-1804';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=6db9654-2028';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=6db9654-2028';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=6db9654-2028';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=6db9654-2028';
+import { loadTransit } from './lib/transit.mjs?v=6db9654-2028';
+import { packingList } from './lib/packing.mjs?v=6db9654-2028';
+import { randomTrivia } from './lib/trivia.mjs?v=6db9654-2028';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, domeViewSvg, passTrack } from './illustrations.mjs?v=6db9654-2028';
+import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=6db9654-2028';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=6db9654-2028';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=6db9654-2028';
+import { fetchWarnings } from './jma.mjs?v=6db9654-2028';
+import { isHolidayDia, holidayName } from './lib/holidays.mjs?v=6db9654-2028';
 
 const DAYS = 60;
 const TZ = 9;
@@ -25,7 +26,8 @@ const localHour = (d) => jst(d).getUTCHours() + jst(d).getUTCMinutes() / 60;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const minOfDay = (d, dateKey) => Math.round((d.getTime() - new Date(`${dateKey}T00:00:00+09:00`).getTime()) / 60e3); // その日の 0:00 からの分（翌日は 1440+）
 const fmtMin = (m) => { const h = Math.floor(m / 60), mm = String(m % 60).padStart(2, '0'); return h >= 24 ? `翌${h - 24}:${mm}` : `${h}:${mm}`; };
-const isHoliday = (dateKey) => [0, 6].includes(new Date(`${dateKey}T12:00:00+09:00`).getDay());
+const isHoliday = (dateKey) => isHolidayDia(dateKey); // 土日・祝日・年末年始は土休日ダイヤ
+const diaLabel = (dateKey) => { const h = holidayName(dateKey); return isHoliday(dateKey) ? `（土休日ダイヤ${h ? '・' + h : ''}）` : '（平日ダイヤ）'; };
 
 // ---------- 画面（① 日と出発駅 / ② 観測場所 / ③ 計画 / ④ 見方と説明） ----------
 const enabledScreens = new Set([1, 4]);
@@ -86,7 +88,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=b296de9-1804');
+  const res = await fetch('./data/iss.tle?v=6db9654-2028');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -340,6 +342,8 @@ async function selectPass(r, kind = 'evening') {
     if (e.travel && e.travel.totalMin > 90) s += (e.travel.totalMin - 90) * 2; // 片道 90 分を超える分は重く見る
     if (isFav(e.site.id)) s -= 60; // お気に入りは同じ天気なら優先
     if (e.site.roadNearby) s += 15; // 幹線道路のそば（明るい・車が多い）は少し下げる
+    const vis = visOf(e);
+    if (vis) s += vis.none ? 800 : Math.round(vis.frac * 150); // 建物や木で隠れる分は下げる
     return s;
   };
   entries.sort((a, b) => score(a) - score(b));
@@ -353,6 +357,32 @@ function sitePass(site, r) {
   const rows = computeRows(obs, new Date(r.visStart.getTime() - 15 * 60e3), new Date(r.visEnd.getTime() + 15 * 60e3));
   return rows[0] ?? null;
 }
+
+/** 地物（建物・木）で隠れる高さ（°）。OpenStreetMap から測った値（site.horizon）がなければ、場所の種類からの目安 */
+function horizonAt(site, az) {
+  if (site.horizon?.deg?.length === 16) {
+    const i = (((az % 360) + 360) % 360) / 22.5; const a = Math.floor(i) % 16, b = (a + 1) % 16, f = i - Math.floor(i);
+    return { deg: site.horizon.deg[a] * (1 - f) + site.horizon.deg[b] * f, est: false };
+  }
+  const t = site.type ?? '';
+  return { deg: /河川敷|海岸|海浜/.test(t) ? 5 : /公園/.test(t) ? 12 : 15, est: true };
+}
+/** 通過のうち、地物の上に出ていて実際に見える区間 */
+function visibleWindow(site, p) {
+  if (!p) return null;
+  const track = passTrack(p);
+  const N = 120;
+  let first = -1, last = -1, est = false;
+  for (let i = 0; i <= N; i++) {
+    const q = track.at(i / N); const h = horizonAt(site, q.az); est = est || h.est;
+    if (q.el >= h.deg) { if (first < 0) first = i; last = i; }
+  }
+  if (first < 0) return { none: true, est, frac: 1 };
+  const s = track.at(first / N), e = track.at(last / N);
+  const frac = 1 - (last - first) / N;
+  return { none: false, est, start: s.d, end: e.d, startEl: s.el, endEl: e.el, frac, hiddenStartMin: (s.d - p.start.d) / 60e3, matters: frac > 0.15 || (s.d - p.start.d) / 60e3 >= 0.75 };
+}
+const visOf = (e) => (e.pass ? (e.vis ??= visibleWindow(e.site, e.pass)) : null);
 
 function warnsOf(e) {
   const warns = [];
@@ -480,6 +510,14 @@ function firstLastFor(route, holiday) {
   return { first: fl[0], last: fl[1], station: t.data.stations[leg.from].n, railway: t.railwayById.get(leg.railway)?.n ?? leg.railway, toward: terminalName(leg) };
 }
 
+/** 建物・木で隠れる分の一行 */
+function visLine(vis) {
+  if (!vis) return '';
+  const src = vis.est ? '（場所の種類からの推定）' : '（地図データの建物から）';
+  if (vis.none) return `<div class="line warn">周りの建物や木で、この通過はほとんど隠れそうです${src}</div>`;
+  if (vis.matters) return `<div class="line warn">建物や木で低い空が隠れるので、見え始めは ${hhmm(vis.start)} ごろ・高さ${vis.startEl.toFixed(0)}°（拳${Math.max(1, Math.round(vis.startEl / 10))}つ分）から${src}</div>`;
+  return vis.est ? '' : '<div class="line">この通過は建物や木に隠れない見込み（地図データの建物から）</div>';
+}
 function renderSites(entries, withWeather) {
   const box = $('#sitesList');
   box.replaceChildren();
@@ -492,7 +530,8 @@ function renderSites(entries, withWeather) {
     const warns = warnsOf(e);
     const travel = e.travel ? `${state.from ? esc(state.from.name) + 'から' : ''}約${e.travel.totalMin}分${e.travel.source === 'estimate' ? '<span class="muted">（概算）</span>' : ''}` : '';
     const access = (e.site.nightAccess === '不明' ? '<div class="line warn">夜間に入れるか公式の記載が見つかっていません</div>' : e.site.nightAccess === '常時開園' ? '<div class="line">常時開園（公式サイトで確認）</div>' : '')
-      + (e.site.roadNearby ? `<div class="line warn">近くに大きな道路（約${e.site.majorRoadM} m）。明るく車が多いので、道路から離れた側に立つ</div>` : '<div class="line">大きな道路から離れていて暗め</div>');
+      + (e.site.roadNearby ? `<div class="line warn">近くに大きな道路（約${e.site.majorRoadM} m）。明るく車が多いので、道路から離れた側に立つ</div>` : '<div class="line">大きな道路から離れていて暗め</div>')
+      + visLine(visOf(e));
     card.className = `site-card${e.pass ? '' : ' dim'}`;
     card.innerHTML = `
       <div class="top">
@@ -670,6 +709,9 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
   reason.push(`${esc(best.site.station)}駅から徒歩${best.site.walkMin}分`);
   const warns = warnsOf(best);
   if (best.site.roadNearby) warns.push(`近くに大きな道路（約${best.site.majorRoadM} m）。道路の明かりを背にして、離れた側に立つ`);
+  const vis = visOf(best);
+  if (vis?.none) warns.push('周りの建物や木で、この通過はほとんど隠れそうです。別の場所を選んでください');
+  const visNote = vis && !vis.none && vis.matters ? `。建物や木で低い空が隠れるので、見え始めは <strong>${hhmm(vis.start)}</strong> ごろ・高さ${vis.startEl.toFixed(0)}°（拳${Math.max(1, Math.round(vis.startEl / 10))}つ分）から${vis.est ? '（推定）' : ''}` : '';
 
   // ---- 時刻 ----
   const obsStart = minOfDay(p.start.d, dayKey), obsEnd = minOfDay(p.end.d, dayKey);
@@ -701,8 +743,8 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
       timeline = `<table class="timeline"><tbody>
         <tr><th>出発</th><td><strong class="${tooLate ? 'ng' : 'acc'}" id="departBy">${fmtMin(departBy)} まで</strong>に${esc(state.from.name)}を出る ${estNote}<div id="goTrain" class="muted small">乗る列車を時刻表から探しています…</div>${manyTransfers}${goLegs}<div class="small">${gmapsLink(state.from, best.site, 'Google マップで行きの経路を見る')}</div></td></tr>
         <tr><th>到着</th><td><strong>${fmtMin(arriveBy)}</strong> までに現地へ。方角を合わせて待つ（下の地図とコンパス）</td></tr>
-        <tr class="obs-row"><th>観測</th><td><div class="obs-big">${fmtMin(obsStart)}〜${fmtMin(obsEnd)}<span class="obs-len">（約${Math.max(1, Math.round((obsEnd - obsStart)))}分）</span></div><div class="obs-sub">${dir16(p.start.az)}の空、拳${Math.max(1, Math.round(p.start.el / 10))}つ分の高さに現れ、${dir16(p.peak.az)}で最も高く${p.peak.el.toFixed(0)}°、${dir16(p.end.az)}で消える。明るさ約${p.mag.toFixed(1)}等</div></td></tr>
-        <tr><th>帰り</th><td>${fmtMin(leaveSite)} ごろ現地を出る<div id="backTrain"></div>${backLegs}<div class="small">${gmapsLinkBack(best.site, state.from, 'Google マップで帰りの経路を見る')}</div>${backFL ? `<div class="${lastOk === false ? 'ng' : 'small'}">${esc(backFL.station)}駅 ${esc(backFL.railway)}${backFL.toward ? `（${esc(backFL.toward)}方面）` : ''}の<strong>最終電車 ${fmtMin(backFL.last)}</strong>${holiday ? '（土休日ダイヤ）' : '（平日ダイヤ）'}${lastOk === false ? '。観測後では間に合いません。別の候補地を選んでください' : ''}</div>` : '<div class="muted small">帰りの最終電車の時刻は取得できませんでした</div>'}</td></tr>
+        <tr class="obs-row"><th>観測</th><td><div class="obs-big">${fmtMin(obsStart)}〜${fmtMin(obsEnd)}<span class="obs-len">（約${Math.max(1, Math.round((obsEnd - obsStart)))}分）</span></div><div class="obs-sub">${dir16(p.start.az)}の空、拳${Math.max(1, Math.round(p.start.el / 10))}つ分の高さに現れ、${dir16(p.peak.az)}で最も高く${p.peak.el.toFixed(0)}°、${dir16(p.end.az)}で消える。明るさ約${p.mag.toFixed(1)}等${visNote}</div></td></tr>
+        <tr><th>帰り</th><td>${fmtMin(leaveSite)} ごろ現地を出る<div id="backTrain"></div>${backLegs}<div class="small">${gmapsLinkBack(best.site, state.from, 'Google マップで帰りの経路を見る')}</div>${backFL ? `<div class="${lastOk === false ? 'ng' : 'small'}">${esc(backFL.station)}駅 ${esc(backFL.railway)}${backFL.toward ? `（${esc(backFL.toward)}方面）` : ''}の<strong>最終電車 ${fmtMin(backFL.last)}</strong>${diaLabel(overnight ? localDate(p.peak.d) : state.dateKey)}${lastOk === false ? '。観測後では間に合いません。別の候補地を選んでください' : ''}</div>` : '<div class="muted small">帰りの最終電車の時刻は取得できませんでした</div>'}</td></tr>
         <tr><th>帰宅</th><td><strong id="returnBy">${fmtMin(returnBy)}</strong> ごろ${esc(state.from.name)}に戻る<span class="muted small" id="returnNote">（出発から帰宅まで 約${Math.floor((returnBy - departBy) / 60)}時間${(returnBy - departBy) % 60}分）</span></td></tr>
       </tbody></table>`
       + (tooLate ? '<p class="ng">出発の目安をもう過ぎています。次点の候補地か、今いる場所の近くで見ることを考えてください。</p>' : '');
@@ -715,10 +757,10 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
       const returnBy = firstBack != null ? Math.max(firstBack, leaveSite) + tv.backMin : null;
       timeline = `<p class="warn small">夜明け前の通過です。電車が動いていない時間なので、<strong>前の晩の終電で行き、始発で帰る</strong>計画です。現地や駅前で数時間待つことになります。無理はしないでください。</p>
       <table class="timeline"><tbody>
-        <tr><th>前夜</th><td>${goFL ? `<strong>${fmtMin(lastGo)}</strong> ${esc(goFL.station)}駅 ${esc(goFL.railway)}${goFL.toward ? `（${esc(goFL.toward)}方面）` : ''}の最終電車に乗る${holiday ? '（土休日ダイヤ）' : '（平日ダイヤ）'}。もっと早い電車でも構いません` : '終電の時刻を取得できませんでした'} ${estNote}${goLegs}<div class="small">${gmapsLink(state.from, best.site, 'Google マップで行きの経路を見る')}</div></td></tr>
+        <tr><th>前夜</th><td>${goFL ? `<strong>${fmtMin(lastGo)}</strong> ${esc(goFL.station)}駅 ${esc(goFL.railway)}${goFL.toward ? `（${esc(goFL.toward)}方面）` : ''}の最終電車に乗る${diaLabel(overnight ? localDate(p.peak.d) : state.dateKey)}。もっと早い電車でも構いません` : '終電の時刻を取得できませんでした'} ${estNote}${goLegs}<div class="small">${gmapsLink(state.from, best.site, 'Google マップで行きの経路を見る')}</div></td></tr>
         <tr><th>到着</th><td>${arriveNight != null ? `<strong>${fmtMin(arriveNight)}</strong> ごろ現地。観測まで約${Math.floor(waitMin / 60)}時間${waitMin % 60}分の待機` : '—'}</td></tr>
-        <tr class="obs-row"><th>観測</th><td><div class="obs-big">${fmtMin(obsStart)}〜${fmtMin(obsEnd)}<span class="obs-len">（約${Math.max(1, Math.round((obsEnd - obsStart)))}分）</span></div><div class="obs-sub">${dir16(p.start.az)}の空、拳${Math.max(1, Math.round(p.start.el / 10))}つ分の高さに現れ、${dir16(p.peak.az)}で最も高く${p.peak.el.toFixed(0)}°、${dir16(p.end.az)}で消える。明るさ約${p.mag.toFixed(1)}等</div></td></tr>
-        <tr><th>始発</th><td>${backFL ? `${esc(backFL.station)}駅 ${esc(backFL.railway)}${backFL.toward ? `（${esc(backFL.toward)}方面）` : ''}の<strong>始発 ${fmtMin(firstBack)}</strong>${isHoliday(localDate(p.peak.d)) ? '（土休日ダイヤ）' : '（平日ダイヤ）'}` : '始発の時刻を取得できませんでした'}${backLegs}</td></tr>
+        <tr class="obs-row"><th>観測</th><td><div class="obs-big">${fmtMin(obsStart)}〜${fmtMin(obsEnd)}<span class="obs-len">（約${Math.max(1, Math.round((obsEnd - obsStart)))}分）</span></div><div class="obs-sub">${dir16(p.start.az)}の空、拳${Math.max(1, Math.round(p.start.el / 10))}つ分の高さに現れ、${dir16(p.peak.az)}で最も高く${p.peak.el.toFixed(0)}°、${dir16(p.end.az)}で消える。明るさ約${p.mag.toFixed(1)}等${visNote}</div></td></tr>
+        <tr><th>始発</th><td>${backFL ? `${esc(backFL.station)}駅 ${esc(backFL.railway)}${backFL.toward ? `（${esc(backFL.toward)}方面）` : ''}の<strong>始発 ${fmtMin(firstBack)}</strong>${diaLabel(localDate(p.peak.d))}` : '始発の時刻を取得できませんでした'}${backLegs}</td></tr>
         <tr><th>帰宅</th><td>${returnBy != null ? `<strong>${fmtMin(returnBy)}</strong> ごろ${esc(state.from.name)}に戻る` : '—'}</td></tr>
       </tbody></table>`;
     }
@@ -737,7 +779,7 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
     timeline = `<p class="muted small">上の「出発駅」を選ぶと、乗る電車・出発時刻・帰りの最終電車を出します。</p>
       <table class="timeline"><tbody>
       <tr><th>到着</th><td><strong>${fmtMin(arriveBy)}</strong> までに${esc(best.site.name)}へ（${esc(best.site.station)}駅 徒歩${best.site.walkMin}分）</td></tr>
-      <tr class="obs-row"><th>観測</th><td><div class="obs-big">${fmtMin(obsStart)}〜${fmtMin(obsEnd)}</div><div class="obs-sub">${dir16(p.start.az)}の空、拳${Math.max(1, Math.round(p.start.el / 10))}つ分の高さに現れ、${dir16(p.peak.az)}で最も高く${p.peak.el.toFixed(0)}°、${dir16(p.end.az)}で消える</div></td></tr>
+      <tr class="obs-row"><th>観測</th><td><div class="obs-big">${fmtMin(obsStart)}〜${fmtMin(obsEnd)}</div><div class="obs-sub">${dir16(p.start.az)}の空、拳${Math.max(1, Math.round(p.start.el / 10))}つ分の高さに現れ、${dir16(p.peak.az)}で最も高く${p.peak.el.toFixed(0)}°、${dir16(p.end.az)}で消える${visNote}</div></td></tr>
       </tbody></table>`;
     packing = packingList({ tempC: best.w.available ? best.w.obs.temp : null, precipProb: 0, precip: 0, wind: 0, overnight, siteType: best.site.type, date: p.peak.d });
   }
@@ -1038,8 +1080,8 @@ async function init() {
   setProposalsLoading('軌道データと鉄道・バスのデータを読み込んでいます');
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=b296de9-1804').then((r) => r.json()),
-    fetch('./data/stations.json?v=b296de9-1804').then((r) => r.json()),
+    fetch('./data/sites.json?v=6db9654-2028').then((r) => r.json()),
+    fetch('./data/stations.json?v=6db9654-2028').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
