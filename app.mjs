@@ -1,16 +1,18 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=3f95569-1734';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=3f95569-1734';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=3f95569-1734';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=3f95569-1734';
-import { loadTransit } from './lib/transit.mjs?v=3f95569-1734';
-import { packingList } from './lib/packing.mjs?v=3f95569-1734';
-import { randomTrivia } from './lib/trivia.mjs?v=3f95569-1734';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, domeViewSvg, passTrack } from './illustrations.mjs?v=3f95569-1734';
-import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=3f95569-1734';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=3f95569-1734';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=3f95569-1734';
-import { fetchWarnings } from './jma.mjs?v=3f95569-1734';
-import { isHolidayDia, holidayName } from './lib/holidays.mjs?v=3f95569-1734';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=51f8f22-1802';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=51f8f22-1802';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=51f8f22-1802';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=51f8f22-1802';
+import { loadTransit } from './lib/transit.mjs?v=51f8f22-1802';
+import { packingList } from './lib/packing.mjs?v=51f8f22-1802';
+import { randomTrivia } from './lib/trivia.mjs?v=51f8f22-1802';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, domeViewSvg, passTrack } from './illustrations.mjs?v=51f8f22-1802';
+import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=51f8f22-1802';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=51f8f22-1802';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=51f8f22-1802';
+import { fetchWarnings } from './jma.mjs?v=51f8f22-1802';
+import { isHolidayDia, holidayName } from './lib/holidays.mjs?v=51f8f22-1802';
+import { fetchToeiVehicles, busesOnPattern } from './gtfsrt.mjs?v=51f8f22-1802';
+import { loadPorts, portsNear, withStatus } from './cycle.mjs?v=51f8f22-1802';
 
 const DAYS = 60;
 const TZ = 9;
@@ -88,7 +90,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=3f95569-1734');
+  const res = await fetch('./data/iss.tle?v=51f8f22-1802');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -654,6 +656,7 @@ async function fillTrains(best, tv, holiday, arriveBy, leaveSite) {
         ? `<div class="train">${trainLine(tr)} に乗る。<span class="small">改札には ${fmtMin(tr.pick.min - 5)} までに。${tr.prev ? `ひとつ前は ${fmtMin(tr.prev.min)} 発` : ''}${tr.next ? `、次の ${fmtMin(tr.next.min)} 発では到着締切に間に合いません` : ''}。${tr.allTypesUsed ? '快速・急行は降りる駅に止まらないことがあります。乗る前に案内表示で確認してください。' : ''}</span></div>`
         : '<div class="muted small">この駅の時刻表を取得できなかったため、出発の目安だけ表示しています。</div>';
     }
+    renderBusLive(goLeg, 'goBusLive').catch(console.error);
     if (tr) {
       const dep = $('#departBy'); if (dep) dep.textContent = `${fmtMin(tr.pick.min - 5)} まで`;
       if (state.routeCtx?.best === best) { state.routeCtx.goStart = tr.pick.min; drawRoute('goRoute', tv.go, tr.pick.min, state.routeCtx.fromLabel, best.site.name, state.routeCtx.status); }
@@ -667,6 +670,7 @@ async function fillTrains(best, tv, holiday, arriveBy, leaveSite) {
         ? `<div class="train">${trainLine(tr)} に乗る（現地を ${fmtMin(leaveSite)} に出る）。<span class="small">${tr.next ? `次は ${fmtMin(tr.next.min)} 発。` : ''}${tr.isBus ? `この系統の<strong>最終バス ${fmtMin(tr.last)}</strong>。` : ''}${tr.allTypesUsed ? '快速・急行は乗り換え駅に止まらないことがあります。' : ''}</span></div>`
         : (backLeg.type === 'bus' ? '<div class="warn small">このバスの時刻表を取得できませんでした。最終バスはバス停の時刻表で確かめてください。</div>' : '');
     }
+    renderBusLive(backLeg, 'backBusLive').catch(console.error);
     if (tr && tv.back) {
       // 乗った後の所要 = 全体 − 乗り場までの徒歩 − 最初の待ち
       const firstWait = backLeg.type === 'bus' ? 12 : 4;
@@ -677,6 +681,74 @@ async function fillTrains(best, tv, holiday, arriveBy, leaveSite) {
       if (state.routeCtx?.best === best) { state.routeCtx.backStart = tr.pick.min; drawRoute('backRoute', tv.back, tr.pick.min, best.site.name, state.routeCtx.fromLabel, state.routeCtx.status); }
     }
   }
+}
+
+/** 都営バスの区間なら、いま走っている便の位置（GTFS-RT）を出す。当日だけ */
+async function renderBusLive(leg, elId) {
+  const el = $(`#${elId}`);
+  if (!el || !leg || leg.type !== 'bus' || !state.transit) return;
+  const t = state.transit;
+  const pat = t.busPattern(leg.pattern);
+  if (!pat || pat.op !== 'Toei') return;
+  if (state.dateKey !== localDate(new Date())) return; // 位置は当日しか意味がない
+  const boardIdx = pat.stops.indexOf(leg.from - t.nRail);
+  const draw = async () => {
+    el.innerHTML = '<span class="muted">都営バスの現在位置を確認中…</span>';
+    const feed = await fetchToeiVehicles();
+    if (!feed) { el.innerHTML = '<span class="muted">都営バスの現在位置はいま取れません。</span>'; return; }
+    const buses = busesOnPattern(feed, pat, (i) => t.poleId(t.nRail + i), boardIdx);
+    const coming = buses.filter((b) => b.before != null && b.before > 0).slice(0, 3);
+    const stopName = (b) => t.nodes[t.nRail + pat.stops[b.stopIdx]]?.n ?? '';
+    const at = feed.feedTs ? new Date(feed.feedTs * 1000).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '';
+    let html = `<span class="muted">いま走っている都営バス（${at} 時点の位置）:</span> `;
+    if (!buses.length) html += 'この系統はいま運行中の便がありません（始発前・最終後か、車庫に戻る途中）。';
+    else if (!coming.length) html += `この系統は ${buses.length} 台走っていますが、乗る停留所より手前にいる便はありません。次の便を待ってください。`;
+    else html += coming.map((b) => `${b.dep ? `始発の停留所を ${b.dep} に出た便` : '1 台'}が <strong>${esc(stopName(b))}</strong>${b.status === 1 ? 'に停車中' : b.status === 0 ? 'にまもなく到着' : 'へ走行中'}（乗る停留所の ${b.before} つ手前）`).join('、') + '。';
+    html += ' <button type="button" class="link" data-buslive>更新</button>';
+    el.innerHTML = html;
+    el.querySelector('[data-buslive]')?.addEventListener('click', draw);
+  };
+  await draw();
+}
+
+/** シェアサイクル: 最寄駅と観測場所の近くのポート。当日は台数も */
+async function renderCycle(best, tv) {
+  const box = $('#cycleBox');
+  if (!box) return;
+  const body = box.querySelector('.cycle-body');
+  const data = await loadPorts();
+  if (!data) { body.innerHTML = '<span class="muted">ポートの一覧を読み込めませんでした。</span>'; return; }
+  const t = state.transit;
+  let stNode = null;
+  if (t && tv?.go && t.nodes[tv.go.to]?.mode === 'rail') stNode = t.nodes[tv.go.to];
+  else if (t) { const idx = t.findStations(best.site.station); if (idx.length) stNode = t.data.stations[idx[0]]; }
+  const nearSt = stNode ? portsNear(data, stNode.lat, stNode.lon, 400, 3) : [];
+  const nearSite = portsNear(data, best.site.lat, best.site.lon, 500, 3);
+  if (!nearSt.length && !nearSite.length) { body.innerHTML = '<span class="muted">最寄駅にも観測場所の近くにもシェアサイクルのポートはありません。</span>'; return; }
+  const today = state.dateKey === localDate(new Date());
+  const w = best.w?.available ? best.w : null;
+  const badOut = w && w.outbound.cycle === false, badIn = w && w.inbound.cycle === false;
+  const list = today ? await withStatus([...nearSt, ...nearSite]) : [...nearSt, ...nearSite].map((p) => ({ ...p, status: null, statusKnown: false }));
+  const byKey = new Map(list.map((p) => [`${p.sys}|${p.id}`, p]));
+  const walk = (m) => `徒歩${Math.max(1, Math.round(m / 80))}分`;
+  const line = (p0, mode) => {
+    const p = byKey.get(`${p0.sys}|${p0.id}`) ?? p0;
+    const sysName = data.systems[p.sys]?.name ?? p.sys;
+    let cnt = '';
+    if (today && p.status) cnt = mode === 'rent' ? `・借りられる自転車 <strong>${p.status.bikes ?? '?'}台</strong>` : `・返せる空き <strong>${p.status.docks ?? '?'}</strong>`;
+    else if (today && p.statusKnown) cnt = '・台数不明';
+    const gm = `<a href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">地図</a>`;
+    return `<li>${esc(p.n)}<span class="muted">（${esc(sysName)}・${walk(p.d)}・約${p.d} m）</span>${cnt} ${gm}</li>`;
+  };
+  let html = '';
+  if (badOut || badIn) html += `<p class="warn">${badOut ? '行き' : ''}${badOut && badIn ? '・' : ''}${badIn ? '帰り' : ''}の天気（${[...new Set([...(badOut ? w.outbound.warn : []), ...(badIn ? w.inbound.warn : [])])].join('・')}）では自転車は勧めません。歩くかバスにしてください。</p>`;
+  else if (best.site.walkMin >= 10) html += `<p>${esc(best.site.station)}駅から徒歩${best.site.walkMin}分。自転車なら数分です。</p>`;
+  if (nearSt.length) html += `<p><strong>${esc(stNode?.n ?? best.site.station)}駅の近くで借りる</strong></p><ul>${nearSt.map((p) => line(p, 'rent')).join('')}</ul>`;
+  else html += `<p class="muted">${esc(best.site.station)}駅の近く（400 m 以内）にはポートがありません。</p>`;
+  if (nearSite.length) html += `<p><strong>観測場所の近くで返す・帰りに借りる</strong></p><ul>${nearSite.map((p) => line(p, 'return')).join('')}</ul>`;
+  else html += '<p class="muted">観測場所の近く（500 m 以内）にはポートがありません。駅で借りても返す所が無いので、往復とも歩くことになります。</p>';
+  html += `<p class="muted">${today ? '台数は今の値です（1 分ごとに更新）。夜は自転車が少ないポートもあります。' : '台数は当日にこの画面を開くと表示します。'}利用には各サービスのアプリ登録が必要です。ポートの情報は公共交通オープンデータセンター（GBFS）。</p>`;
+  body.innerHTML = html;
 }
 
 function gmapsLink(from, to, label) {
@@ -741,10 +813,10 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
       const tooLate = dayKey === localDate(now) && departBy < minOfDay(now, dayKey);
       const lastOk = backFL ? backFL.last >= leaveSite : null;
       timeline = `<table class="timeline"><tbody>
-        <tr><th>出発</th><td><strong class="${tooLate ? 'ng' : 'acc'}" id="departBy">${fmtMin(departBy)} まで</strong>に${esc(state.from.name)}を出る ${estNote}<div id="goTrain" class="muted small">乗る列車を時刻表から探しています…</div>${manyTransfers}${goLegs}<div class="small">${gmapsLink(state.from, best.site, 'Google マップで行きの経路を見る')}</div></td></tr>
+        <tr><th>出発</th><td><strong class="${tooLate ? 'ng' : 'acc'}" id="departBy">${fmtMin(departBy)} まで</strong>に${esc(state.from.name)}を出る ${estNote}<div id="goTrain" class="muted small">乗る列車を時刻表から探しています…</div><div id="goBusLive" class="small"></div>${manyTransfers}${goLegs}<div class="small">${gmapsLink(state.from, best.site, 'Google マップで行きの経路を見る')}</div></td></tr>
         <tr><th>到着</th><td><strong>${fmtMin(arriveBy)}</strong> までに現地へ。方角を合わせて待つ（下の地図とコンパス）</td></tr>
         <tr class="obs-row"><th>観測</th><td><div class="obs-big">${fmtMin(obsStart)}〜${fmtMin(obsEnd)}<span class="obs-len">（約${Math.max(1, Math.round((obsEnd - obsStart)))}分）</span></div><div class="obs-sub">${dir16(p.start.az)}の空、拳${Math.max(1, Math.round(p.start.el / 10))}つ分の高さに現れ、${dir16(p.peak.az)}で最も高く${p.peak.el.toFixed(0)}°、${dir16(p.end.az)}で消える。明るさ約${p.mag.toFixed(1)}等${visNote}</div></td></tr>
-        <tr><th>帰り</th><td>${fmtMin(leaveSite)} ごろ現地を出る<div id="backTrain"></div>${backLegs}<div class="small">${gmapsLinkBack(best.site, state.from, 'Google マップで帰りの経路を見る')}</div>${backFL ? `<div class="${lastOk === false ? 'ng' : 'small'}">${esc(backFL.station)}駅 ${esc(backFL.railway)}${backFL.toward ? `（${esc(backFL.toward)}方面）` : ''}の<strong>最終電車 ${fmtMin(backFL.last)}</strong>${diaLabel(overnight ? localDate(p.peak.d) : state.dateKey)}${lastOk === false ? '。観測後では間に合いません。別の候補地を選んでください' : ''}</div>` : '<div class="muted small">帰りの最終電車の時刻は取得できませんでした</div>'}</td></tr>
+        <tr><th>帰り</th><td>${fmtMin(leaveSite)} ごろ現地を出る<div id="backTrain"></div><div id="backBusLive" class="small"></div>${backLegs}<div class="small">${gmapsLinkBack(best.site, state.from, 'Google マップで帰りの経路を見る')}</div>${backFL ? `<div class="${lastOk === false ? 'ng' : 'small'}">${esc(backFL.station)}駅 ${esc(backFL.railway)}${backFL.toward ? `（${esc(backFL.toward)}方面）` : ''}の<strong>最終電車 ${fmtMin(backFL.last)}</strong>${diaLabel(overnight ? localDate(p.peak.d) : state.dateKey)}${lastOk === false ? '。観測後では間に合いません。別の候補地を選んでください' : ''}</div>` : '<div class="muted small">帰りの最終電車の時刻は取得できませんでした</div>'}</td></tr>
         <tr><th>帰宅</th><td><strong id="returnBy">${fmtMin(returnBy)}</strong> ごろ${esc(state.from.name)}に戻る<span class="muted small" id="returnNote">（出発から帰宅まで 約${Math.floor((returnBy - departBy) / 60)}時間${(returnBy - departBy) % 60}分）</span></td></tr>
       </tbody></table>`
       + (tooLate ? '<p class="ng">出発の目安をもう過ぎています。次点の候補地か、今いる場所の近くで見ることを考えてください。</p>' : '');
@@ -793,6 +865,7 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
     ${warns.length ? `<p class="warn small">注意: ${warns.join('、')}</p>` : ''}
     ${timeline}
     <div id="trainInfo" class="small"><span class="muted">運行情報を確認中…</span></div>
+    <details class="packing" id="cycleBox"><summary>自転車で行くなら（シェアサイクル）</summary><div class="small cycle-body"><span class="muted">近くのポートを調べています…</span></div></details>
     <details class="packing"><summary>待ち時間に読む ISS 豆知識</summary><ul class="small">${randomTrivia(3).map((x) => `<li>${esc(x.t)}</li>`).join('')}</ul></details>
     ${packing ? `<details class="packing" open><summary>持って行くもの</summary><p class="small"><strong>必ず</strong></p><ul class="small">${packing.must.map((x) => `<li>${esc(x)}</li>`).join('')}</ul><p class="small"><strong>あると良い</strong></p><ul class="small">${packing.nice.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
     ${alts ? `<p class="small" style="margin-top:10px">雲が流れたとき・電車が遅れたときの次点: </p><ul class="small">${alts}</ul>` : ''}
@@ -812,6 +885,7 @@ function renderPlanFor(best, good, withWeather, cloudyNote) {
     statusMapFor([tv.go, tv.back]).then((m) => { if (m && state.routeCtx?.best === best) { state.routeCtx.status = m; drawRoute('goRoute', tv.go, state.routeCtx.goStart ?? goStart, fromLabel, best.site.name, m); drawRoute('backRoute', tv.back, state.routeCtx.backStart ?? backStart, best.site.name, fromLabel, m); } }).catch(console.error);
     if (!overnight) fillTrains(best, tv, holiday, arriveBy, leaveSite).catch(console.error);
   }
+  renderCycle(best, tv).catch(console.error);
   return renderTrainInfo(best, good);
 }
 
@@ -1080,8 +1154,8 @@ async function init() {
   setProposalsLoading('軌道データと鉄道・バスのデータを読み込んでいます');
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=3f95569-1734').then((r) => r.json()),
-    fetch('./data/stations.json?v=3f95569-1734').then((r) => r.json()),
+    fetch('./data/sites.json?v=51f8f22-1802').then((r) => r.json()),
+    fetch('./data/stations.json?v=51f8f22-1802').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);
