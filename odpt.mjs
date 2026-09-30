@@ -1,15 +1,32 @@
-// ODPT の列車運行情報。アクセストークンはビルド時に .env から config.mjs に埋め込む（scripts/build-pages.sh）
+// ODPT の運行情報・駅時刻表・バス時刻表。
+// アクセストークンはブラウザに置かず、中継サーバ（https://tyra.jp/odpt/api/、2026-09-30 決定）を経由する。
+// 使い方は GitHub/call/proxy/USAGE.md。ホスト名を差し替えるだけで、acl:consumerKey は不要。
 // 公開 API（東京メトロ・都営・りんかい線・多摩モノレール・横浜市営など）とチャレンジ API（JR東日本・東急・京急・京王・西武・東武など）で
-// 提供事業者が違うので、両方を使う
-import { ODPT_TOKENS } from './config.mjs?v=6db9654-2028';
-
+// 提供事業者が違うので、両方を使う。中継は 1 IP 60 回/分。429 が返ったら Retry-After 秒は呼ばない
+const PROXY = 'https://tyra.jp/odpt/api';
 const ENDPOINTS = [
-  { base: 'https://api.odpt.org/api/v4', label: '公開API', token: ODPT_TOKENS.public || '' },
-  { base: 'https://api-challenge.odpt.org/api/v4', label: 'チャレンジAPI', token: ODPT_TOKENS.challenge || '' },
+  { base: `${PROXY}/main/v4`, label: '公開API' },
+  { base: `${PROXY}/challenge/v4`, label: 'チャレンジAPI' },
 ];
+let pausedUntil = 0; // 429 のあと、この時刻までは中継を呼ばない
 
-export function getToken(which = 0) { return ENDPOINTS[which].token; }
-export function hasAnyToken() { return ENDPOINTS.some((e) => e.token); }
+/** 中継が使えるか（レート制限で休止中でなければ true）。旧名 hasAnyToken */
+export function hasAnyToken() { return Date.now() >= pausedUntil; }
+
+/** 中継サーバへの GET。429 なら Retry-After の間は休止、失敗は null */
+async function proxyGet(url) {
+  if (Date.now() < pausedUntil) return null;
+  try {
+    const res = await fetch(url);
+    if (res.status === 429 || res.status === 503) {
+      const wait = Number(res.headers.get('Retry-After')) || 60;
+      pausedUntil = Date.now() + wait * 1000;
+      return null;
+    }
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
 
 // 路線名（sites.json / stations.json の表記）→ odpt:Railway ID
 export const RAILWAY_IDS = {
@@ -100,16 +117,13 @@ export async function fetchStationTimetable(stationId, railwayId) {
   const key = `${stationId}|${railwayId}`;
   if (sttCache.has(key)) return sttCache.get(key);
   let result = [];
+  let failed = false;
   for (const ep of ENDPOINTS) {
-    if (!ep.token) continue;
-    try {
-      const res = await fetch(`${ep.base}/odpt:StationTimetable?acl:consumerKey=${encodeURIComponent(ep.token)}&odpt:station=${encodeURIComponent(stationId)}&odpt:railway=${encodeURIComponent(railwayId)}`);
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (data.length) { result = data; break; }
-    } catch { /* try next */ }
+    const data = await proxyGet(`${ep.base}/odpt:StationTimetable?odpt:station=${encodeURIComponent(stationId)}&odpt:railway=${encodeURIComponent(railwayId)}`);
+    if (!data) { failed = true; continue; }
+    if (data.length) { result = data; break; }
   }
-  sttCache.set(key, result);
+  if (!failed || result.length) sttCache.set(key, result); // 取れなかったときは次回また試す
   return result;
 }
 
@@ -119,16 +133,13 @@ export async function fetchBusTimetable(patternId, calendarId) {
   const key = `${patternId}|${calendarId ?? ''}`;
   if (busTtCache.has(key)) return busTtCache.get(key);
   let result = [];
+  let failed = false;
   for (const ep of ENDPOINTS) {
-    if (!ep.token) continue;
-    try {
-      const res = await fetch(`${ep.base}/odpt:BusTimetable?acl:consumerKey=${encodeURIComponent(ep.token)}&odpt:busroutePattern=${encodeURIComponent(patternId)}${calendarId ? `&odpt:calendar=${encodeURIComponent(calendarId)}` : ''}`);
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (data.length) { result = data; break; }
-    } catch { /* try next */ }
+    const data = await proxyGet(`${ep.base}/odpt:BusTimetable?odpt:busroutePattern=${encodeURIComponent(patternId)}${calendarId ? `&odpt:calendar=${encodeURIComponent(calendarId)}` : ''}`);
+    if (!data) { failed = true; continue; }
+    if (data.length) { result = data; break; }
   }
-  busTtCache.set(key, result);
+  if (!failed || result.length) busTtCache.set(key, result);
   return result;
 }
 
@@ -140,19 +151,14 @@ export function trainTypeJa(id) {
 }
 
 /**
- * 全事業者の運行情報を取得（60秒キャッシュ）。トークンが無ければ null
+ * 全事業者の運行情報を取得（60秒キャッシュ。中継側も 30 秒キャッシュ）。両方とも取れなければ null
  */
 export async function fetchTrainInformation() {
-  if (!hasAnyToken()) return null;
   if (cache.data && Date.now() - cache.at < 60e3) return cache.data;
-  const results = await Promise.all(ENDPOINTS.map(async (ep, i) => {
-    const token = getToken(i);
-    if (!token) return [];
-    const res = await fetch(`${ep.base}/odpt:TrainInformation?acl:consumerKey=${encodeURIComponent(token)}`);
-    if (!res.ok) throw new Error(`ODPT ${ep.label} ${res.status}`);
-    return res.json();
-  }));
-  const data = results.flat();
+  if (!hasAnyToken()) return cache.data ?? null;
+  const results = await Promise.all(ENDPOINTS.map((ep) => proxyGet(`${ep.base}/odpt:TrainInformation`)));
+  if (results.every((r) => !r)) return cache.data ?? null; // 中継が落ちていても、アプリは静的な時刻表だけで動く
+  const data = results.flatMap((r) => r ?? []);
   cache = { at: Date.now(), data };
   return data;
 }
