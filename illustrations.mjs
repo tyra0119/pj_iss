@@ -210,73 +210,113 @@ export function passTrack(p) {
   return { at, durMs };
 }
 
-export function firstPersonSvg(p, opts = {}, width = 720, height = 420) {
+export function firstPersonSvg(p, opts = {}, width = 720, height = 440) {
   const track = passTrack(p);
   const t = Math.max(0, Math.min(1, opts.t ?? 0));
   const pos = track.at(t);
-  const centerAz = opts.centerAz ?? p.start.az;
-  const halfFov = 45, maxEl = 90; // 縦は地平線から真上まで
-  const horizonY = height - 96;
+  const halfFov = 45, maxEl = 90;                    // 横 90°、縦は地平線から真上まで
+  const centerAz = (() => {                          // 顔の向き（光をゆっくり追いかける）。光が画面から出ないよう ±40° に収める
+    const c = opts.centerAz ?? p.start.az;
+    const r = ((pos.az - c + 540) % 360) - 180;
+    return Math.abs(r) <= 40 ? c : (c + r - Math.sign(r) * 40 + 360) % 360;
+  })();
+  const horizonY = height - 110;
   const relTo = (az) => ((az - centerAz + 540) % 360) - 180;
+  const inView = (az) => Math.abs(relTo(az)) <= halfFov + 4;
   const x = (az) => { const d = Math.max(-halfFov - 20, Math.min(halfFov + 20, relTo(az))); return width / 2 + (d / halfFov) * (width / 2 - 24); };
-  const y = (el) => horizonY - (Math.min(el, maxEl) / maxEl) * (horizonY - 28);
-  // 方位の目盛り（15°ごと、顔の向きに合わせて流れる）
+  const y = (el) => horizonY - (Math.min(el, maxEl) / maxEl) * (horizonY - 60);
+  // 方位の目盛り（15°ごと。顔の向きに合わせて流れる）
   let ticks = '';
   const base = Math.round(centerAz / 15) * 15;
   for (let d = -60; d <= 60; d += 15) {
     const az = (base + d + 360) % 360;
-    const r = relTo(az);
-    if (Math.abs(r) > halfFov + 6) continue;
+    if (!inView(az)) continue;
     const major = az % 45 === 0;
-    ticks += `<line x1="${x(az).toFixed(1)}" y1="${horizonY}" x2="${x(az).toFixed(1)}" y2="${horizonY + (major ? 10 : 6)}" stroke="currentColor" stroke-opacity=".8"/>` + (major ? `<text x="${x(az).toFixed(1)}" y="${horizonY + 26}" text-anchor="middle" font-size="12" fill="currentColor" fill-opacity=".85">${dir16(az)}</text>` : '');
+    ticks += `<line x1="${x(az).toFixed(1)}" y1="${horizonY}" x2="${x(az).toFixed(1)}" y2="${horizonY + (major ? 10 : 6)}" stroke="currentColor" stroke-opacity=".8"/>` + (major ? `<text x="${x(az).toFixed(1)}" y="${horizonY + 26}" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor" fill-opacity=".9">${dir16(az)}</text>` : '');
   }
-  // 遠景（木・建物）。顔の向きで流れるように、方位に固定して描く
+  // 高さの目安線（30°・60°）
+  const elLines = [30, 60].map((el) => `<line x1="0" x2="${width}" y1="${y(el).toFixed(1)}" y2="${y(el).toFixed(1)}" stroke="#9fb4e8" stroke-opacity=".25" stroke-dasharray="4 6"/><text x="${width - 8}" y="${(y(el) - 4).toFixed(1)}" text-anchor="end" font-size="11" fill="#9fb4e8">高さ${el}°（拳${el / 10}つ）</text>`).join('');
+  // 遠景（木・建物）。方位に固定して描く
   let sky = '';
   for (let i = 0; i < 48; i++) {
     const az = i * 7.5, seed = (i * 9301 + 49297) % 233280;
-    const r = relTo(az); if (Math.abs(r) > halfFov + 8) continue;
+    if (!inView(az)) continue;
     const w = 18 + (seed % 40), h = 8 + (seed % 26), cx = x(az);
     sky += seed % 3 === 0 ? `<ellipse cx="${cx.toFixed(1)}" cy="${horizonY - h / 2}" rx="${w / 2}" ry="${h / 2 + 4}" fill="#0b1020"/>` : `<rect x="${(cx - w / 2).toFixed(1)}" y="${horizonY - h}" width="${w}" height="${h}" fill="#0b1020"/>`;
   }
-  // 拳の積み重ね（10°ごと）: 正面の手前。いま見ている高さまで積む
-  const fists = Math.max(1, Math.min(6, Math.round((t === 0 ? p.start.el : pos.el) / 10)));
-  const fistW = 44, armX = width / 2;
-  let hand = `<path d="M${armX - 26},${height} L${armX - 18},${horizonY + 10} L${armX + 18},${horizonY + 10} L${armX + 26},${height} Z" fill="#1a2440" stroke="#3c5a8a" stroke-width="1.5"/>`;
+  // 腕と拳: 光の方へ腕を伸ばし、光の高さまで拳を積む（拳 1 つ ≒ 10°）
+  const targetAz = t === 0 ? p.start.az : pos.az, targetEl = t === 0 ? p.start.el : pos.el;
+  const fists = Math.max(1, Math.min(9, Math.round(targetEl / 10)));
+  const fistW = 40, armX = Math.max(70, Math.min(width - 70, x(targetAz)));
+  let hand = `<path d="M${width / 2 - 30},${height} L${(armX - 16).toFixed(1)},${horizonY + 14} L${(armX + 16).toFixed(1)},${horizonY + 14} L${width / 2 + 30},${height} Z" fill="#1a2440" stroke="#3c5a8a" stroke-width="1.5"/>`;
   for (let i = 0; i < fists; i++) {
     const top = y((i + 1) * 10), bottom = y(i * 10);
-    hand += `<rect x="${armX - fistW / 2}" y="${top + 2}" width="${fistW}" height="${Math.max(6, bottom - top - 4)}" rx="9" fill="#243055" stroke="#5f7bb0" stroke-width="1.5" fill-opacity=".92"/>`
-      + `<text x="${armX + fistW / 2 + 8}" y="${((top + bottom) / 2 + 4).toFixed(1)}" font-size="12" fill="currentColor" fill-opacity=".85">拳${i + 1}つ＝${(i + 1) * 10}°</text>`;
+    hand += `<rect x="${(armX - fistW / 2).toFixed(1)}" y="${(top + 2).toFixed(1)}" width="${fistW}" height="${Math.max(6, bottom - top - 4).toFixed(1)}" rx="9" fill="#243055" stroke="#5f7bb0" stroke-width="1.5" fill-opacity=".92"/>`;
   }
-  // 軌跡: 通った分は実線、これから通る分は点線
+  const usedRects = []; // 文字の矩形 [x0,y0,x1,y1]。重なりを避けるのに使う
+  const overlap = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+  const textRect = (tx, ty, anchor, w) => (anchor === 'middle' ? [tx - w / 2, ty - 14, tx + w / 2, ty + 4] : anchor === 'start' ? [tx, ty - 14, tx + w, ty + 4] : [tx - w, ty - 14, tx, ty + 4]);
+  // 道筋: 通った分は実線、これからは点線＋矢じり
   const pts = (from, to, n) => { const a = []; for (let i = 0; i <= n; i++) { const q = track.at(from + (to - from) * (i / n)); a.push(`${x(q.az).toFixed(1)},${y(q.el).toFixed(1)}`); } return a.join(' '); };
-  const done = t > 0 ? `<polyline points="${pts(0, t, 40)}" fill="none" stroke="#ffd166" stroke-width="3" opacity=".9"/>` : '';
+  const done = t > 0 ? `<polyline points="${pts(0, t, 40)}" fill="none" stroke="#ffd166" stroke-width="3.5" opacity=".9"/>` : '';
   const todoPts = pts(t, 1, 40).split(' ');
   const todo = t < 1 ? `<polyline points="${todoPts.join(' ')}" fill="none" stroke="#ffd166" stroke-width="2.5" stroke-dasharray="7 7" opacity=".75"/>${arrowsAlong(todoPts, Math.max(1, Math.round(3 * (1 - t))), '#ffd166', 8)}` : '';
+  // ①②③ の印。画面の外なら端に「この先」の印
+  const edgeUsed = { left: [], right: [] };
+  const mark = (az, el, n, text, place) => {
+    if (inView(az) && el <= maxEl) {
+      const qx = x(az), qy = y(el);
+      const side = place === 'above' ? 'middle' : qx < width / 2 ? 'start' : 'end'; // 端で切れないよう、中央寄りに文字を出す
+      const tx = place === 'above' ? qx : qx + (side === 'start' ? 14 : -14), ty = place === 'above' ? qy - 16 : qy + 4;
+      usedRects.push(textRect(tx, ty, side, text.length * 12));
+      return `<circle cx="${qx.toFixed(1)}" cy="${qy.toFixed(1)}" r="9" fill="#ffd166"/><text x="${qx.toFixed(1)}" y="${(qy + 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="800" fill="#1a1400">${n}</text><text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="${side}" font-size="12" font-weight="700" fill="#ffd166" stroke="#0b1230" stroke-width="3" paint-order="stroke">${text}</text>`;
+    }
+    const r = relTo(az), left = r < 0, ex = left ? 14 : width - 14;
+    let ey = Math.max(70, Math.min(horizonY - 14, y(Math.min(el, maxEl))));
+    const used = edgeUsed[left ? 'left' : 'right'];
+    while (used.some((u) => Math.abs(u - ey) < 18)) ey += 18; // 同じ側の印が重なるときは下にずらす
+    used.push(ey);
+    usedRects.push(textRect(ex, ey, left ? 'start' : 'end', 110));
+    return `<text x="${ex}" y="${ey.toFixed(1)}" text-anchor="${left ? 'start' : 'end'}" font-size="12" font-weight="700" fill="#ffd166" fill-opacity=".85">${left ? '◀ ' : ''}${n} ${left ? '左' : '右'}へ ${Math.abs(r).toFixed(0)}°${left ? '' : ' ▶'}</text>`;
+  };
+  const marks = mark(p.start.az, p.start.el, '①', `現れる ${hhmm(p.start.d)}`, 'side') + mark(p.peak.az, p.peak.el, '②', `最も高い ${hhmm(p.peak.d)}・${p.peak.el.toFixed(0)}°`, 'above') + mark(p.end.az, p.end.el, '③', `消える ${hhmm(p.end.d)}`, 'side');
+  // 光（いまの位置）
   const sx = x(pos.az), sy = y(pos.el);
-  const startMark = t > 0.02 ? `<circle cx="${x(p.start.az).toFixed(1)}" cy="${y(p.start.el).toFixed(1)}" r="7" fill="none" stroke="#ffd166" stroke-opacity=".7" stroke-dasharray="3 3"/>` : '';
-  const label = t === 0 ? `ここに現れる ${hhmm(p.start.d)}` : t >= 1 ? `ここで消える ${hhmm(p.end.d)}` : `${hhmmss(pos.d)}`;
-  const sub = t === 0 ? `${dir16(p.start.az)}・拳${Math.max(1, Math.round(p.start.el / 10))}つ分（${p.start.el.toFixed(0)}°）` : `${dir16(pos.az)}・高さ${pos.el.toFixed(0)}°${pos.el >= 60 ? '（大きく見上げる）' : ''}`;
-  const turn = relTo(p.start.az);
-  const head = Math.abs(turn) < 3 ? `正面を ${dir16(centerAz)} に向けて立ち、腕をまっすぐ伸ばして拳を積む` : `顔を${turn < 0 ? '右' : '左'}へ ${Math.abs(turn).toFixed(0)}° 回して追いかける（いま ${dir16(centerAz)} を向いている）`;
-  const offTop = pos.el > maxEl ? `<polygon points="${sx.toFixed(1)},14 ${(sx - 10).toFixed(1)},32 ${(sx + 10).toFixed(1)},32" fill="#ffd166"/><text x="${sx.toFixed(1)}" y="46" text-anchor="middle" font-size="12" fill="#ffd166">もっと上（${pos.el.toFixed(0)}°）</text>` : '';
-  return `<svg viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="自分の目から見た空の見え方">
+  const nowLabel = t > 0 && t < 1 ? `${hhmmss(pos.d)}　${dir16(pos.az)}・高さ${pos.el.toFixed(0)}°` : '';
+  const nearPeak = Math.hypot(x(p.peak.az) - sx, y(p.peak.el) - sy) < 70;
+  if (nowLabel && pos.el <= maxEl) usedRects.push(textRect(sx, nearPeak ? sy + 44 : sy - 34, 'middle', nowLabel.length * 12));
+  const fistText = `拳${fists}つ分（約${fists * 10}°）`;
+  const fistY = y(fists * 10 - 5) + 4;
+  const fistCands = [[armX + fistW / 2 + 8, 'start'], [armX - fistW / 2 - 8, 'end']];
+  const fistPick = fistCands.map((c) => { const r = textRect(c[0], fistY, c[1], fistText.length * 12); const off = r[0] < 4 || r[2] > width - 4 ? 1e5 : 0; return [c, off + usedRects.reduce((sum, u) => sum + overlap(r, u), 0)]; }).sort((a, b) => a[1] - b[1])[0][0]; // 画面から出る側は使わない
+  const fistLabel = `<text x="${fistPick[0].toFixed(1)}" y="${fistY.toFixed(1)}" text-anchor="${fistPick[1]}" font-size="12" font-weight="700" fill="currentColor" stroke="#0b1230" stroke-width="3" paint-order="stroke">${fistText}</text>`;
+  const light = pos.el <= maxEl
+    ? `<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="26" fill="url(#fpGlow)"/><circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="5.5" fill="#fff"/>${nowLabel ? `<text x="${sx.toFixed(1)}" y="${(nearPeak ? sy + 44 : sy - 34).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" fill="#fff" stroke="#0b1230" stroke-width="3" paint-order="stroke">${nowLabel}</text>` : ''}`
+    : `<polygon points="${sx.toFixed(1)},54 ${(sx - 10).toFixed(1)},72 ${(sx + 10).toFixed(1)},72" fill="#ffd166"/><text x="${sx.toFixed(1)}" y="86" text-anchor="middle" font-size="12" fill="#ffd166">もっと上（${pos.el.toFixed(0)}°）</text>`;
+  // 上の説明
+  const turn = ((pos.az - p.start.az + 540) % 360) - 180;
+  const head = t === 0 ? `まず ${dir16(p.start.az)} を向いて立つ。光は①に現れ、点線の向きへ進む`
+    : t >= 1 ? `${dir16(pos.az)} の空で消える。出現から顔を${turn < 0 ? '左' : '右'}へ ${Math.abs(turn).toFixed(0)}° 回したところ`
+      : `いま ${dir16(centerAz)} を向いている（出現の向きから${turn < 0 ? '左' : '右'}へ ${Math.abs(turn).toFixed(0)}°）。顔を回しながら光を追う`;
+  return `<svg viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="自分の目から見た空の見え方。黄色の線が ISS の道筋、四角は腕を伸ばした拳">
 <defs><radialGradient id="fpGlow"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#ffe9a8" stop-opacity=".9"/><stop offset="1" stop-color="#ffd166" stop-opacity="0"/></radialGradient>
 <linearGradient id="fpSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1a4a"/><stop offset="1" stop-color="#2a3d6e"/></linearGradient>
 <clipPath id="fpClip"><rect x="0" y="0" width="${width}" height="${height}" rx="8"/></clipPath></defs>
 <g clip-path="url(#fpClip)">
 <rect x="0" y="0" width="${width}" height="${horizonY}" fill="url(#fpSky)"/>
 <rect x="0" y="${horizonY}" width="${width}" height="${height - horizonY}" fill="#182233"/>
-<g fill="#fff" opacity=".7"><circle cx="${x(centerAz - 30).toFixed(1)}" cy="60" r="1.3"/><circle cx="${x(centerAz - 12).toFixed(1)}" cy="110" r="1"/><circle cx="${x(centerAz + 5).toFixed(1)}" cy="50" r="1.4"/><circle cx="${x(centerAz + 22).toFixed(1)}" cy="90" r="1.1"/><circle cx="${x(centerAz + 38).toFixed(1)}" cy="40" r="1.3"/><circle cx="${x(centerAz - 40).toFixed(1)}" cy="150" r="1"/></g>
+<g fill="#fff" opacity=".7"><circle cx="${x(centerAz - 30).toFixed(1)}" cy="90" r="1.3"/><circle cx="${x(centerAz - 12).toFixed(1)}" cy="140" r="1"/><circle cx="${x(centerAz + 5).toFixed(1)}" cy="80" r="1.4"/><circle cx="${x(centerAz + 22).toFixed(1)}" cy="120" r="1.1"/><circle cx="${x(centerAz + 38).toFixed(1)}" cy="70" r="1.3"/><circle cx="${x(centerAz - 40).toFixed(1)}" cy="170" r="1"/><circle cx="${x(centerAz + 15).toFixed(1)}" cy="200" r="1.2"/></g>
 ${sky}
+${elLines}
 <line x1="0" x2="${width}" y1="${horizonY}" y2="${horizonY}" stroke="currentColor" stroke-width="1.5"/>
 ${ticks}
-${todo}${done}${startMark}
-${hand}
-${pos.el <= maxEl ? `<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="26" fill="url(#fpGlow)"/><circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="5" fill="#fff"/>
-<text x="${sx.toFixed(1)}" y="${(sy - 34).toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="#ffd166">${label}</text>
-<text x="${sx.toFixed(1)}" y="${(sy - 18).toFixed(1)}" text-anchor="middle" font-size="12" fill="currentColor">${sub}</text>` : offTop}
+${todo}${done}
+${hand}${fistLabel}
+${marks}
+${light}
 <text x="16" y="22" font-size="12" fill="currentColor" fill-opacity=".85">あなたの目から見た空（横 90°・上は真上まで）。明るい星のような光が、点滅せず、すべるように動く</text>
 <text x="16" y="42" font-size="13" fill="currentColor" font-weight="700">${head}</text>
+<text x="16" y="${height - 12}" font-size="11" fill="currentColor" fill-opacity=".6">黄色＝ISS の道筋（実線は通った分、点線はこれから）　四角＝腕を伸ばした拳（1 つ≒高さ10°）　点線の横線＝高さ30°・60°</text>
 </g>
 </svg>`;
 }
