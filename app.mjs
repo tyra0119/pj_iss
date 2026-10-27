@@ -1,18 +1,18 @@
-import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=51f8f22-1802';
-import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=51f8f22-1802';
-import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=51f8f22-1802';
-import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=51f8f22-1802';
-import { loadTransit } from './lib/transit.mjs?v=51f8f22-1802';
-import { packingList } from './lib/packing.mjs?v=51f8f22-1802';
-import { randomTrivia } from './lib/trivia.mjs?v=51f8f22-1802';
-import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, domeViewSvg, passTrack } from './illustrations.mjs?v=51f8f22-1802';
-import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=51f8f22-1802';
-import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=51f8f22-1802';
-import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=51f8f22-1802';
-import { fetchWarnings } from './jma.mjs?v=51f8f22-1802';
-import { isHolidayDia, holidayName } from './lib/holidays.mjs?v=51f8f22-1802';
-import { fetchToeiVehicles, busesOnPattern } from './gtfsrt.mjs?v=51f8f22-1802';
-import { loadPorts, portsNear, withStatus } from './cycle.mjs?v=51f8f22-1802';
+import { parseTle, makeSatrec, observer, iteratePasses, DEFAULT_CRITERIA, groundTrack } from './lib/passes.mjs?v=e93dc60-1952';
+import { fetchHourly, assessSite, FORECAST_DAYS } from './lib/weather.mjs?v=e93dc60-1952';
+import { describePass, HOW_TO_FIND, dir16 } from './lib/describe.mjs?v=e93dc60-1952';
+import { estimateTravel, PLAN_MARGINS } from './lib/plan.mjs?v=e93dc60-1952';
+import { loadTransit } from './lib/transit.mjs?v=e93dc60-1952';
+import { packingList } from './lib/packing.mjs?v=e93dc60-1952';
+import { randomTrivia } from './lib/trivia.mjs?v=e93dc60-1952';
+import { elevationGuideSvg, twilightSvg, observationSceneSvg, firstPersonSvg, domeViewSvg, passTrack } from './illustrations.mjs?v=e93dc60-1952';
+import { showSiteMap, startCompass, stopCompass, showOrbitMap } from './onsite.mjs?v=e93dc60-1952';
+import { routeTimelineHtml, ROUTE_VIEW_CSS } from './routeview.mjs?v=e93dc60-1952';
+import { hasAnyToken, lineStatuses, fetchStationTimetable, fetchBusTimetable, trainTypeJa } from './odpt.mjs?v=e93dc60-1952';
+import { fetchWarnings } from './jma.mjs?v=e93dc60-1952';
+import { isHolidayDia, holidayName } from './lib/holidays.mjs?v=e93dc60-1952';
+import { fetchToeiVehicles, busesOnPattern } from './gtfsrt.mjs?v=e93dc60-1952';
+import { loadPorts, portsNear, withStatus } from './cycle.mjs?v=e93dc60-1952';
 
 const DAYS = 60;
 const TZ = 9;
@@ -90,7 +90,7 @@ async function loadTle() {
     }
   } catch { /* fall through */ }
   if (cached) return { tle: parseTle(cached.text), source: 'CelesTrak（この端末に保存したデータ。更新に失敗）' };
-  const res = await fetch('./data/iss.tle?v=51f8f22-1802');
+  const res = await fetch('./data/iss.tle?v=e93dc60-1952');
   return { tle: parseTle(await res.text()), source: '同梱ファイル（CelesTrak に届かなかったため）' };
 }
 function tleEpoch(satrec) {
@@ -266,9 +266,11 @@ async function drawOrbit() {
 }
 $('#orbitDetails').addEventListener('toggle', () => { if ($('#orbitDetails').open) drawOrbit().catch(console.error); });
 $('#fpPlay').addEventListener('click', () => { if (fp.playing) fpStop(); else fpPlay(); });
+const fpCaption = () => document.querySelectorAll('[data-fpcap]').forEach((x) => { x.hidden = x.dataset.fpcap !== fp.mode; });
+fpCaption();
 document.querySelectorAll('button[data-fpmode]').forEach((b) => {
   b.setAttribute('aria-pressed', String(b.dataset.fpmode === fp.mode));
-  b.addEventListener('click', () => { fp.mode = b.dataset.fpmode; store.set('fpMode', fp.mode); document.querySelectorAll('button[data-fpmode]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); if (fp.pass) fpDraw(fp.t); });
+  b.addEventListener('click', () => { fp.mode = b.dataset.fpmode; store.set('fpMode', fp.mode); document.querySelectorAll('button[data-fpmode]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); fpCaption(); if (fp.pass) fpDraw(fp.t); });
 });
 $('#fpSeek').addEventListener('input', (e) => {
   // つまみで飛んだときも、そこまで顔を追いかけてきた向きになるよう 0 から追従し直す
@@ -1154,8 +1156,8 @@ async function init() {
   setProposalsLoading('軌道データと鉄道・バスのデータを読み込んでいます');
   const [{ tle, source }, sitesJson, stationsJson, transit] = await Promise.all([
     loadTle(),
-    fetch('./data/sites.json?v=51f8f22-1802').then((r) => r.json()),
-    fetch('./data/stations.json?v=51f8f22-1802').then((r) => r.json()),
+    fetch('./data/sites.json?v=e93dc60-1952').then((r) => r.json()),
+    fetch('./data/stations.json?v=e93dc60-1952').then((r) => r.json()),
     loadTransit().catch((err) => { console.warn('transit data unavailable', err); return null; }),
   ]);
   state.satrec = makeSatrec(tle);

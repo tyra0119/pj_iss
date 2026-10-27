@@ -284,74 +284,133 @@ ${pos.el <= maxEl ? `<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="26" 
 
 // 図5: 後ろ斜め上から見た「あなたと空のドーム」。地平線の輪、方角、頭上へ向かう軌跡、指さす腕
 // opts: { t, centerAz }（firstPersonSvg と同じ）
-export function domeViewSvg(p, opts = {}, width = 720, height = 460) {
+export function domeViewSvg(p, opts = {}, width = 720, height = 480) {
   const D = Math.PI / 180;
   const track = passTrack(p);
   const t = Math.max(0, Math.min(1, opts.t ?? 0));
   const pos = track.at(t);
-  const centerAz = opts.centerAz ?? p.start.az;      // 正面（奥）にする方角
-  // 3D: x=右, y=奥, z=上。空は半径 1 の半球
+  // 図は回さない。いちばん高くなる方角を奥にして固定し、光だけが動く（図全体が回ると分かりにくい: 2026-10-27）
+  const centerAz = opts.fixedAz ?? p.peak.az;
+  // 3D: x=右, y=奥, z=上。空は半径 1 の半球（お椀をかぶせた形）
   const P3 = (az, el, r = 1) => { const a = (az - centerAz) * D, e = el * D; return [r * Math.cos(e) * Math.sin(a), r * Math.cos(e) * Math.cos(a), r * Math.sin(e)]; };
-  // カメラ: 観測者の後ろ 1.9、高さ 0.55 から、少し上向きに見る
-  const E = [0, -2.3, 1.0], F = [0, 0.25, 0.55];
+  // カメラ: 観測者の後ろ 2.6、高さ 1.35 から、ドームの中ほどを見る
+  const E = [0, -2.6, 1.35], F = [0, 0.05, 0.42];
   const f = (() => { const d = [F[0] - E[0], F[1] - E[1], F[2] - E[2]]; const n = Math.hypot(...d); return d.map((c) => c / n); })();
   const rgt = [1, 0, 0];
-  const up = [-(f[1] * rgt[2] - f[2] * rgt[1]), -(f[2] * rgt[0] - f[0] * rgt[2]), -(f[0] * rgt[1] - f[1] * rgt[0])]; // rgt × f
-  const focal = 1.3;
-  const proj = (P) => { const d = [P[0] - E[0], P[1] - E[1], P[2] - E[2]]; const zc = d[0] * f[0] + d[1] * f[1] + d[2] * f[2]; if (zc < 0.08) return null; const xc = d[0] * rgt[0] + d[1] * rgt[1] + d[2] * rgt[2]; const yc = d[0] * up[0] + d[1] * up[1] + d[2] * up[2]; return [width / 2 + (xc / zc) * focal * width / 2, height * 0.47 - (yc / zc) * focal * width / 2]; };
+  const up = [-(f[1] * rgt[2] - f[2] * rgt[1]), -(f[2] * rgt[0] - f[0] * rgt[2]), -(f[0] * rgt[1] - f[1] * rgt[0])];
+  const focal = 1.42;
+  const proj = (P) => { const d = [P[0] - E[0], P[1] - E[1], P[2] - E[2]]; const zc = d[0] * f[0] + d[1] * f[1] + d[2] * f[2]; if (zc < 0.08) return null; const xc = d[0] * rgt[0] + d[1] * rgt[1] + d[2] * rgt[2]; const yc = d[0] * up[0] + d[1] * up[1] + d[2] * up[2]; return [width / 2 + (xc / zc) * focal * width / 2, height * 0.5 - (yc / zc) * focal * width / 2]; };
   const S = (az, el, r) => proj(P3(az, el, r));
-  const poly = (pts, attrs) => { const seg = []; let cur = []; for (const q of pts) { if (!q) { if (cur.length) seg.push(cur); cur = []; } else cur.push(`${q[0].toFixed(1)},${q[1].toFixed(1)}`); } if (cur.length) seg.push(cur); return seg.map((s) => `<polyline points="${s.join(' ')}" ${attrs}/>`).join(''); };
-  // 地平線の輪と、高さの輪（30°・60°）、正面の子午線
+  const pt = (q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`;
+  const poly = (pts, attrs) => { const seg = []; let cur = []; for (const q of pts) { if (!q) { if (cur.length) seg.push(cur); cur = []; } else cur.push(pt(q)); } if (cur.length) seg.push(cur); return seg.map((s) => `<polyline points="${s.join(' ')}" ${attrs}/>`).join(''); };
+  // 手前（カメラ側）か奥か。奥は薄く描いて、ドームの丸みが分かるようにする
+  const isFar = (az) => Math.cos((az - centerAz) * D) > 0;
+  const ringHalf = (el, far, attrs) => poly(Array.from({ length: 73 }, (_, i) => { const az = centerAz + i * 5 - 180; return isFar(az) === far ? S(az, el) : null; }), attrs);
   const ring = (el, attrs) => poly(Array.from({ length: 73 }, (_, i) => S(centerAz + i * 5 - 180, el)), attrs);
-  const horizon = ring(0, 'fill="none" stroke="currentColor" stroke-width="1.6"');
-  const rings = ring(30, 'fill="none" stroke="currentColor" stroke-opacity=".22" stroke-dasharray="3 5"') + ring(60, 'fill="none" stroke="currentColor" stroke-opacity=".18" stroke-dasharray="3 5"');
-  const meridian = poly(Array.from({ length: 37 }, (_, i) => S(centerAz, i * 5)).concat(Array.from({ length: 36 }, (_, i) => S(centerAz + 180, 90 - (i + 1) * 5))), 'fill="none" stroke="currentColor" stroke-opacity=".15"');
-  // 地面（地平線の輪の内側）: 輪の多角形を塗る
-  const groundPts = Array.from({ length: 73 }, (_, i) => S(centerAz + i * 5 - 180, 0)).filter(Boolean).map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(' ');
-  // 方角ラベル（地平線の少し外側）
+  // 地面: 地平線の輪の内側。中心から外へ少し明るくして「床」に見せる
+  const groundPts = Array.from({ length: 73 }, (_, i) => S(centerAz + i * 5 - 180, 0)).filter(Boolean).map(pt).join(' ');
+  // ドームの輪郭（空の半球を、地平線から真上まで 8 本の線で）
+  let meridians = '';
+  for (let k = 0; k < 8; k++) {
+    const az = centerAz + k * 45;
+    meridians += poly(Array.from({ length: 19 }, (_, i) => S(az, i * 5)), `fill="none" stroke="#9fb4e8" stroke-opacity="${isFar(az) ? .12 : .22}" stroke-width="1"`);
+  }
+  const horizonFar = ringHalf(0, true, 'fill="none" stroke="#e8ecf5" stroke-opacity=".55" stroke-width="1.4"');
+  const horizonNear = ringHalf(0, false, 'fill="none" stroke="#e8ecf5" stroke-width="2.2"');
+  const rings = [30, 60].map((el) => ringHalf(el, true, 'fill="none" stroke="#9fb4e8" stroke-opacity=".2" stroke-dasharray="4 5"') + ringHalf(el, false, 'fill="none" stroke="#9fb4e8" stroke-opacity=".45" stroke-dasharray="4 5"')).join('');
+  // 方角ラベル（地平線の少し外側）。奥は小さく薄く
   const DIRS8 = [['北', 0], ['北東', 45], ['東', 90], ['南東', 135], ['南', 180], ['南西', 225], ['西', 270], ['北西', 315]];
   let labels = '';
-  for (const [n, az] of DIRS8) { const q = S(az, 0, 1.12); if (!q || q[1] > height - 8) continue; const front = Math.cos((az - centerAz) * D) < 0; labels += `<text x="${q[0].toFixed(1)}" y="${(q[1] + 4).toFixed(1)}" text-anchor="middle" font-size="${front ? 13 : 11}" font-weight="${front ? 700 : 400}" fill="currentColor" fill-opacity="${front ? 1 : .6}">${n}</text>`; }
-  // 高さの目安ラベル（正面の子午線上）
+  for (const [n, az] of DIRS8) { const q = S(az, 0, 1.1); if (!q || q[1] > height - 6) continue; const far = isFar(az); labels += `<text x="${q[0].toFixed(1)}" y="${(q[1] + 5).toFixed(1)}" text-anchor="middle" font-size="${far ? 12 : 14}" font-weight="700" fill="currentColor" fill-opacity="${far ? .6 : .95}">${n}</text>`; }
+  // 高さの目安（手前側の輪に書く）
+  const zen = S(0, 89.9);
+  const qpk = S(p.peak.az, p.peak.el);
+  const zenLabel = zen && !(qpk && Math.hypot(qpk[0] - zen[0], qpk[1] - zen[1]) < 40) ? `<circle cx="${zen[0].toFixed(1)}" cy="${zen[1].toFixed(1)}" r="2" fill="#9fb4e8"/><text x="${zen[0].toFixed(1)}" y="${(zen[1] - 7).toFixed(1)}" text-anchor="middle" font-size="11" fill="#9fb4e8">真上（90°）</text>` : '';
+  // 道筋: 空の上の黄色い線と、その真下を地面にたどった灰色の点線（線が空に浮いていることが分かるように）
+  const N = 60;
+  const samples = Array.from({ length: N + 1 }, (_, i) => track.at(i / N));
+  const skyPts = samples.map((q) => S(q.az, q.el));
+  const groundTrail = poly(samples.map((q) => S(q.az, 0, Math.cos(q.el * D))), 'fill="none" stroke="#c9d3ea" stroke-opacity=".35" stroke-width="1.2" stroke-dasharray="3 4"');
+  const iDone = Math.round(t * N);
+  const done = iDone > 0 ? poly(skyPts.slice(0, iDone + 1), 'fill="none" stroke="#ffd166" stroke-width="4" stroke-linecap="round"') : '';
+  const todoStr = skyPts.slice(iDone).filter(Boolean).map(pt);
+  const todo = iDone < N ? poly(skyPts.slice(iDone), 'fill="none" stroke="#ffd166" stroke-width="2.5" stroke-dasharray="7 7" opacity=".85"') + arrowsAlong(todoStr, Math.max(1, Math.round(3 * (1 - t))), '#ffd166', 8) : '';
+  // 高さを示す縦線: 光から真下の地面へ（いま）と、最も高い所から地面へ
+  const drop = (az, el, attrs) => { const a = S(az, el), b = S(az, 0, Math.cos(el * D)); return a && b ? `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" ${attrs}/><circle cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" r="2.5" fill="#c9d3ea" fill-opacity=".6"/>` : ''; };
+  const dropNow = t > 0 && t < 1 ? drop(pos.az, pos.el, 'stroke="#ffd166" stroke-opacity=".45" stroke-dasharray="2 4"') : '';
+  const dropPeak = drop(p.peak.az, p.peak.el, 'stroke="#c9d3ea" stroke-opacity=".3" stroke-dasharray="2 4"');
+  // ①②③ の印
+  // 文字は、②は上に、①③は外側（左右）に置く。地平線近くの方角の文字と重ならないように
+  const mark = (q, n, text, place) => {
+    if (!q) return '';
+    const side = place === 'above' ? 'middle' : q[0] < width / 2 ? 'end' : 'start';
+    const tx = place === 'above' ? q[0] : q[0] + (side === 'end' ? -14 : 14), ty = place === 'above' ? q[1] - 16 : q[1] + 4;
+    return `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="9" fill="#ffd166"/><text x="${q[0].toFixed(1)}" y="${(q[1] + 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="800" fill="#1a1400">${n}</text><text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="${side}" font-size="12" font-weight="700" fill="#ffd166" stroke="#0b1230" stroke-width="3" paint-order="stroke">${text}</text>`;
+  };
+  const qs = S(p.start.az, p.start.el), qp = qpk, qe = S(p.end.az, p.end.el);
+  // 高さの目安ラベル: 手前の右か左のうち、①②③の文字から遠い側に
   let elLabels = '';
-  for (const el of [30, 60]) { const q = S(centerAz + 40, el); if (q) elLabels += `<text x="${(q[0] + 8).toFixed(1)}" y="${(q[1] - 4).toFixed(1)}" font-size="11" fill="currentColor" fill-opacity=".7">${el}°${el === 30 ? '（拳3つ）' : ''}</text>`; }
-  const zen = S(0, 89.9); const Lq = S(pos.az, pos.el); const zenLabel = zen && !(Lq && Math.hypot(Lq[0] - zen[0], Lq[1] - zen[1]) < 60) ? `<text x="${zen[0].toFixed(1)}" y="${(zen[1] - 8).toFixed(1)}" text-anchor="middle" font-size="11" fill="currentColor" fill-opacity=".7">真上</text>` : '';
-  // 軌跡: 通った分は実線、これからは点線＋矢じり
-  const seq = (a, b, n) => Array.from({ length: n + 1 }, (_, i) => { const q = track.at(a + (b - a) * i / n); return S(q.az, q.el); });
-  const donePts = t > 0 ? seq(0, t, 40) : [];
-  const todoPts = t < 1 ? seq(t, 1, 40) : [];
-  const todoStr = todoPts.filter(Boolean).map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`);
-  const done = donePts.length ? poly(donePts, 'fill="none" stroke="#ffd166" stroke-width="3.5" stroke-linecap="round"') : '';
-  const todo = todoPts.length ? poly(todoPts, 'fill="none" stroke="#ffd166" stroke-width="2.5" stroke-dasharray="7 7" opacity=".8"') + arrowsAlong(todoStr, Math.max(1, Math.round(3 * (1 - t))), '#ffd166', 8) : '';
-  // 観測者（原点に立つ、後ろ姿）と、光を指さす腕
-  const H = 0.26; // 人の背の高さ（ドーム半径 1 に対して）
-  const head = proj([0, 0, H]), hip = proj([0, 0, H * 0.45]), shoulder = proj([0, 0, H * 0.8]);
-  const footL = proj([-0.035, 0, 0]), footR = proj([0.035, 0, 0]), foot = proj([0, 0, 0]);
-  const arm = (() => { const P = P3(pos.az, pos.el, 1); const L = H * 0.75; const v = [P[0], P[1], P[2] - H * 0.8]; const n = Math.hypot(...v); return proj([v[0] / n * L, v[1] / n * L, H * 0.8 + v[2] / n * L]); })();
-  const person = head && hip && footL && footR ? `<line x1="${shoulder[0].toFixed(1)}" y1="${shoulder[1].toFixed(1)}" x2="${hip[0].toFixed(1)}" y2="${hip[1].toFixed(1)}" stroke="#e8ecf5" stroke-width="9" stroke-linecap="round"/><line x1="${hip[0].toFixed(1)}" y1="${hip[1].toFixed(1)}" x2="${footL[0].toFixed(1)}" y2="${footL[1].toFixed(1)}" stroke="#e8ecf5" stroke-width="5" stroke-linecap="round"/><line x1="${hip[0].toFixed(1)}" y1="${hip[1].toFixed(1)}" x2="${footR[0].toFixed(1)}" y2="${footR[1].toFixed(1)}" stroke="#e8ecf5" stroke-width="5" stroke-linecap="round"/><circle cx="${head[0].toFixed(1)}" cy="${head[1].toFixed(1)}" r="9" fill="#e8ecf5"/>${arm ? `<line x1="${shoulder[0].toFixed(1)}" y1="${shoulder[1].toFixed(1)}" x2="${arm[0].toFixed(1)}" y2="${arm[1].toFixed(1)}" stroke="#ffd166" stroke-width="4" stroke-linecap="round"/>` : ''}<text x="${(foot[0] + 16).toFixed(1)}" y="${(foot[1] + 6).toFixed(1)}" font-size="12" fill="currentColor">あなた</text>` : '';
-  // 光
+  const farFromMarks = (q) => Math.min(...[qs, qp, qe].filter(Boolean).map((m) => Math.hypot(m[0] - q[0], m[1] - q[1])), 1e9);
+  const elSide = [140, 220, 40, 320].map((a) => { const q = S(centerAz + a, 30); return [a, q ? farFromMarks(q) : 0]; }).sort((x, y) => y[1] - x[1])[0][0];
+  const elRight = elSide < 180;
+  for (const el of [30, 60]) { const q = S(centerAz + elSide, el); if (q) elLabels += `<text x="${(q[0] + (elRight ? 6 : -6)).toFixed(1)}" y="${(q[1] + 4).toFixed(1)}" text-anchor="${elRight ? 'start' : 'end'}" font-size="11" fill="#9fb4e8">高さ${el}°${el === 30 ? '（拳3つ）' : '（拳6つ）'}</text>`; }
+  const marks = mark(qs, '①', `現れる ${hhmm(p.start.d)}・${dir16(p.start.az)}`, 'side') + mark(qp, '②', `最も高い ${hhmm(p.peak.d)}・${p.peak.el.toFixed(0)}°`, 'above') + mark(qe, '③', `消える ${hhmm(p.end.d)}・${dir16(p.end.az)}`, 'side');
+  // 観測者（中央に立つ。体は光の方へ向き、腕で指す）
+  const H = 0.34;
+  const faceA = (pos.az - centerAz) * D;                       // 体の向き（光の方角）
+  const sh = (s) => proj([Math.cos(faceA) * s, -Math.sin(faceA) * s, H * 0.8]); // 肩の左右
+  const head = proj([0, 0, H]), hip = proj([0, 0, H * 0.48]), neck = proj([0, 0, H * 0.82]);
+  const footL = proj([Math.cos(faceA) * -0.05, Math.sin(faceA) * 0.05, 0]), footR = proj([Math.cos(faceA) * 0.05, Math.sin(faceA) * -0.05, 0]), foot = proj([0, 0, 0]);
+  const shL = sh(-0.07), shR = sh(0.07);
+  const arm = (() => { const P = P3(pos.az, pos.el, 1); const L = H * 0.8; const base = [Math.cos(faceA) * 0.07, -Math.sin(faceA) * 0.07, H * 0.8]; const v = [P[0] - base[0], P[1] - base[1], P[2] - base[2]]; const n = Math.hypot(...v); return [proj(base), proj([base[0] + v[0] / n * L, base[1] + v[1] / n * L, base[2] + v[2] / n * L])]; })();
+  const lineTo = (a, b, w, c = '#e8ecf5') => (a && b ? `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>` : '');
+  const shadow = foot ? `<ellipse cx="${foot[0].toFixed(1)}" cy="${(foot[1] + 2).toFixed(1)}" rx="18" ry="5" fill="#000" fill-opacity=".35"/>` : '';
+  const person = shadow + lineTo(hip, footL, 6) + lineTo(hip, footR, 6) + lineTo(neck, hip, 11) + lineTo(shL, shR, 7) + lineTo(arm[0], arm[1], 5, '#ffd166')
+    + (head ? `<circle cx="${head[0].toFixed(1)}" cy="${head[1].toFixed(1)}" r="11" fill="#e8ecf5"/>` : '')
+    + (foot ? `<text x="${(foot[0] + 22).toFixed(1)}" y="${(foot[1] + 4).toFixed(1)}" font-size="13" font-weight="700" fill="currentColor">あなた</text>` : '');
+  // 目から光への視線
   const L = S(pos.az, pos.el);
-  const startQ = S(p.start.az, p.start.el);
-  const startMark = t > 0.02 && startQ ? `<circle cx="${startQ[0].toFixed(1)}" cy="${startQ[1].toFixed(1)}" r="6" fill="none" stroke="#ffd166" stroke-opacity=".7" stroke-dasharray="3 3"/>` : '';
-  const label = t === 0 ? `ここに現れる ${hhmm(p.start.d)}` : t >= 1 ? `ここで消える ${hhmm(p.end.d)}` : hhmmss(pos.d);
-  const sub = t === 0 ? `${dir16(p.start.az)}・拳${Math.max(1, Math.round(p.start.el / 10))}つ分（${p.start.el.toFixed(0)}°）` : `${dir16(pos.az)}・高さ${pos.el.toFixed(0)}°`;
-  const ly = L ? Math.max(48, L[1] - 20) : 0; // ラベルは光の上。上端からはみ出さない
-  const light = L ? `<circle cx="${L[0].toFixed(1)}" cy="${L[1].toFixed(1)}" r="24" fill="url(#dmGlow)"/><circle cx="${L[0].toFixed(1)}" cy="${L[1].toFixed(1)}" r="5" fill="#fff"/><text x="${L[0].toFixed(1)}" y="${(ly - 18).toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="#ffd166" stroke="#0b1230" stroke-width="3" paint-order="stroke">${label}</text><text x="${L[0].toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="12" fill="currentColor" stroke="#0b1230" stroke-width="3" paint-order="stroke">${sub}</text>` : '';
+  const sight = head && L ? `<line x1="${head[0].toFixed(1)}" y1="${head[1].toFixed(1)}" x2="${L[0].toFixed(1)}" y2="${L[1].toFixed(1)}" stroke="#fff" stroke-opacity=".25" stroke-dasharray="2 5"/>` : '';
+  // 光（いまの位置）
+  const nowLabel = t > 0 && t < 1 ? `${hhmmss(pos.d)}　${dir16(pos.az)}・高さ${pos.el.toFixed(0)}°` : '';
+  // いまの位置の文字: 上・下・右・左のうち、①②③の文字から最も遠い所に置く
+  // ①②③の文字のおおよその矩形 [x0, y0, x1, y1]（①③は外側に 150 px、②は上に 140 px）
+  const sideRect = (q) => (q ? (q[0] < width / 2 ? [q[0] - 164, q[1] - 9, q[0] - 14, q[1] + 9] : [q[0] + 14, q[1] - 9, q[0] + 164, q[1] + 9]) : null);
+  const markRects = [sideRect(qs), qp && [qp[0] - 70, qp[1] - 29, qp[0] + 70, qp[1] - 11], sideRect(qe)].filter(Boolean);
+  const overlap = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+  const nowPos = (() => {
+    if (!L) return null;
+    const W = 180, Hh = 18;
+    const cands = [[L[0], L[1] - 34, 'middle'], [L[0], L[1] + 46, 'middle'], [L[0] + 34, L[1] + 5, 'start'], [L[0] - 34, L[1] + 5, 'end']];
+    const rect = (c) => (c[2] === 'middle' ? [c[0] - W / 2, c[1] - Hh, c[0] + W / 2, c[1]] : c[2] === 'start' ? [c[0], c[1] - Hh, c[0] + W, c[1]] : [c[0] - W, c[1] - Hh, c[0], c[1]]);
+    const score = (c) => { const r = rect(c); let bad = markRects.reduce((sum, m) => sum + overlap(r, m), 0); if (r[0] < 4 || r[2] > width - 4 || r[1] < 30) bad += 1e4; return bad; };
+    return cands.map((c, i) => [c, score(c) + i]).sort((a, b) => a[1] - b[1])[0][0]; // 同点なら上→下→右→左の順
+  })();
+  const light = L ? `<circle cx="${L[0].toFixed(1)}" cy="${L[1].toFixed(1)}" r="26" fill="url(#dmGlow)"/><circle cx="${L[0].toFixed(1)}" cy="${L[1].toFixed(1)}" r="5.5" fill="#fff"/>${nowLabel ? `<text x="${nowPos[0].toFixed(1)}" y="${nowPos[1].toFixed(1)}" text-anchor="${nowPos[2]}" font-size="13" font-weight="700" fill="#fff" stroke="#0b1230" stroke-width="3" paint-order="stroke">${nowLabel}</text>` : ''}` : '';
   // 星
   let stars = '';
-  for (let i = 0; i < 26; i++) { const q = S((i * 47) % 360, 8 + (i * 29) % 70); if (q) stars += `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${1 + (i % 3) * 0.4}" fill="#fff" opacity=".6"/>`; }
-  const turn = ((p.start.az - centerAz + 540) % 360) - 180;
-  const headTxt = Math.abs(turn) < 3 ? `${dir16(centerAz)} を向いて立つ。空を、あなたの後ろ斜め上から見た図` : `顔を${turn < 0 ? '右' : '左'}へ ${Math.abs(turn).toFixed(0)}° 回して追いかける（いま ${dir16(centerAz)} を向いている）`;
-  return `<svg viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="あなたと空のドームを後ろ斜め上から見た図">
+  for (let i = 0; i < 30; i++) { const q = S((i * 47) % 360, 8 + (i * 29) % 70); if (q) stars += `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${1 + (i % 3) * 0.4}" fill="#fff" opacity=".5"/>`; }
+  // 上の説明。顔の向きは、いまの光の方角から
+  const face = dir16(pos.az);
+  const turn = ((pos.az - p.start.az + 540) % 360) - 180;
+  const headTxt = t === 0 ? `空をお椀のような丸天井に見立て、あなたの後ろ上から見た図。まず ${dir16(p.start.az)} を向いて待つ`
+    : t >= 1 ? `${face} の空で消える。出現から顔を${turn < 0 ? '左' : '右'}へ ${Math.abs(turn).toFixed(0)}° 回したところ`
+      : `いま ${face} を向いている（出現の向きから${turn < 0 ? '左' : '右'}へ ${Math.abs(turn).toFixed(0)}°）。顔を回しながら光を追う`;
+  return `<svg viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="空のドームを後ろ上から見た図。黄色の線が ISS の道筋、灰色の点線はその真下">
 <defs><radialGradient id="dmGlow"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#ffe9a8" stop-opacity=".9"/><stop offset="1" stop-color="#ffd166" stop-opacity="0"/></radialGradient>
-<linearGradient id="dmSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070f2a"/><stop offset="1" stop-color="#1c2c58"/></linearGradient></defs>
+<linearGradient id="dmSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070f2a"/><stop offset="1" stop-color="#1c2c58"/></linearGradient>
+<radialGradient id="dmGround" cx="50%" cy="50%" r="55%"><stop offset="0" stop-color="#2a3a3a"/><stop offset="1" stop-color="#172230"/></radialGradient></defs>
 <rect x="0" y="0" width="${width}" height="${height}" fill="url(#dmSky)" rx="8"/>
 ${stars}
-<polygon points="${groundPts}" fill="#182233" fill-opacity=".95"/>
-${rings}${meridian}${horizon}${labels}${elLabels}${zenLabel}
-${todo}${done}${startMark}
+<polygon points="${groundPts}" fill="url(#dmGround)" fill-opacity=".97"/>
+${meridians}${rings}${horizonFar}${groundTrail}${dropPeak}
+${todo}${done}
+${horizonNear}${labels}${elLabels}${zenLabel}
+${dropNow}${sight}
 ${person}
+${marks}
 ${light}
-<text x="16" y="22" font-size="12" fill="currentColor" fill-opacity=".85">${headTxt}</text>
+<text x="16" y="22" font-size="12.5" fill="currentColor" fill-opacity=".9">${headTxt}</text>
+<text x="16" y="${height - 12}" font-size="11" fill="currentColor" fill-opacity=".6">白い輪＝地平線　点線の輪＝高さ30°・60°　黄色＝ISS の道筋　灰色の点線＝道筋の真下の地面</text>
 </svg>`;
 }

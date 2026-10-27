@@ -5,7 +5,7 @@ let portsPromise = null;
 const statusCache = new Map(); // sys -> { at, map }
 let pausedUntil = 0;
 
-export async function loadPorts(url = './data/cycle.json?v=51f8f22-1802') {
+export async function loadPorts(url = './data/cycle.json?v=e93dc60-1952') {
   if (!portsPromise) portsPromise = fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   return portsPromise;
 }
